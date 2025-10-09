@@ -1,0 +1,124 @@
+# spec.yaml
+# FINAL WORKING VERSION: Corrects the regex syntax for the Gherkin check.
+
+structure:
+  - # Block 1: H1 Document Title.
+    min_occurrences: 1
+    max_occurrences: 1
+    sequence:
+      - type: heading_open
+        level: 1
+        content_regex: '^V: .+'
+
+  - # Block 2: Description section.
+    min_occurrences: 1
+    max_occurrences: 1
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Description$'
+      - type: paragraph_open
+
+  - # Block 3: Metadata (Simple Case - for N/A Thresholds).
+    min_occurrences: 0
+    max_occurrences: 1
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Metadata$'
+      - type: inline
+      - type: heading_close
+      - type: bullet_list_open
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '(?i)^\*\*Category\*\*:\s*(security|operations|development|regulatory|risk)$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '(?i)^\*\*Display Control\*\*:\s*(traffic light|temperature bar|pie chart)$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '^\*\*Thresholds\*\*:\s*N/A$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '^\*\*Maturity Level\*\*:\s*.+$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: bullet_list_close
+
+  - # Block 4: Metadata (Complex Case - for Nested Thresholds).
+    min_occurrences: 0
+    max_occurrences: 1
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Metadata$'
+      - type: inline
+      - type: heading_close
+      - type: bullet_list_open
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '(?i)^\*\*Category\*\*:\s*(security|operations|development|regulatory|risk)$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '(?i)^\*\*Display Control\*\*:\s*(traffic light|temperature bar|pie chart)$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '^\*\*Thresholds\*\*:\s*$'
+      - type: inline
+      - type: paragraph_close
+      - type: bullet_list_open
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '(?i)^\*\*(Green|Amber|Red)\*\*:.+$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '(?i)^\*\*(Green|Amber|Red)\*\*:.+$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '(?i)^\*\*(Green|Amber|Red)\*\*:.+$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: bullet_list_close
+      - type: list_item_close
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '^\*\*Maturity Level\*\*:\s*.+$'
+      - type: inline
+      - type: paragraph_close
+      - type: list_item_close
+      - type: bullet_list_close
+
+  - # Block 5: Features section.
+    min_occurrences: 1
+    max_occurrences: 1
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Features$'
+      - type: fence
+        info: 'gherkin'
+        # CORRECTED: Uses (?m:...) syntax to apply the multiline flag correctly within the OR group.
+        content_regex: '(^$)|(?m:^(\s*(?:$|#.*|(?:FEATURE|BACKGROUND|SCENARIO OUTLINE|SCENARIO|EXAMPLE|GIVEN|WHEN|THEN|AND|BUT)\b.*)\s*(\n|\Z))+$)'
