@@ -11,6 +11,7 @@ import sys
 import re
 import yaml
 import os
+import textwrap
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
@@ -291,45 +292,54 @@ class MarkdownValidator:
         return relative_links
 
     def validate_links(self, filepath: Path, content: str, result: ValidationResult) -> bool:
-        if not self.links_spec:
+        physical_links = self.extract_links(content)
+        established_links = []
+        if self.links_spec and 'established_links' in self.links_spec:
+            established_links = self.links_spec.get('established_links', {}).get(filepath.name, [])
+        
+        all_links = list(set(physical_links + established_links))
+        if not all_links and not (self.links_spec and 'required_links' in self.links_spec):
             return True
 
-        physical_links = self.extract_links(content)
+        for link in all_links:
+            normalized_link = os.path.normpath(link)
+            link_path = filepath.parent / normalized_link
+            if not link_path.exists():
+                message = f"Broken link to '{link}' (target does not exist)"
+                if message not in result.warnings:
+                    result.warnings.append(message)
+                    self.log(ErrorLevel.WARN, f"{filepath.name}: {message}")
         
-        established_links = []
-        if 'established_links' in self.links_spec:
-            established_links = self.links_spec['established_links'].get(filepath.name, [])
-        
-        all_links = physical_links + established_links
-
-        if 'allowed_targets' in self.links_spec:
+        if self.links_spec and 'allowed_targets' in self.links_spec:
             for link in all_links:
-                link_path = filepath.parent / link
+                normalized_link = os.path.normpath(link)
+                link_path = filepath.parent / normalized_link
                 link_valid = False
                 for target in self.links_spec['allowed_targets']:
-                    target_dir = filepath.parent / target['directory']
-                    filename_pattern = re.compile(target['filename_regex'])
                     try:
-                        if link_path.resolve().parent == target_dir.resolve() and filename_pattern.match(link_path.name):
+                        target_dir = (filepath.parent / target['directory']).resolve()
+                        filename_pattern = re.compile(target['filename_regex'])
+                        if link_path.resolve().parent == target_dir and filename_pattern.match(link_path.name):
                             link_valid = True
                             break
-                    except:
-                        pass
+                    except Exception:
+                        continue
                 if not link_valid:
-                    message = f"{filepath.name}: Invalid link target '{link}'"
-                    result.warnings.append(message)
-                    self.log(ErrorLevel.WARN, message)
+                    message = f"Link to '{link}' is not permitted by allowed_targets rule"
+                    if message not in result.warnings:
+                        result.warnings.append(message)
+                        self.log(ErrorLevel.WARN, f"{filepath.name}: {message}")
 
-        if 'required_links' in self.links_spec:
+        if self.links_spec and 'required_links' in self.links_spec:
             required_spec = self.links_spec['required_links']
             required_for_this_file = required_spec.get(str(filepath), required_spec.get(filepath.name))
-
             if required_for_this_file:
                 for req_link in required_for_this_file:
                     if req_link not in all_links:
-                        message = f"{filepath.name}: Missing required link to '{req_link}'"
-                        result.warnings.append(message)
-                        self.log(ErrorLevel.WARN, message)
+                        message = f"Missing required link to '{req_link}'"
+                        if message not in result.warnings:
+                            result.warnings.append(message)
+                            self.log(ErrorLevel.WARN, f"{filepath.name}: {message}")
         return True
 
     def validate_file(self, filepath: Path) -> ValidationResult:
@@ -338,7 +348,13 @@ class MarkdownValidator:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            self.load_links_spec(filepath.parent / 'links.yaml')
+            spec_loaded = self.load_links_spec(filepath.parent / 'links.yaml')
+            # --- MODIFIED: The check for missing links.yaml is now the default behavior ---
+            if not spec_loaded:
+                message = "Missing links.yaml in directory"
+                result.warnings.append(message)
+                self.log(ErrorLevel.WARN, f"{filepath.name}: {message}")
+
             if not self.validate_structure(filepath, content, result):
                 return result
             self.validate_links(filepath, content, result)
@@ -347,7 +363,7 @@ class MarkdownValidator:
             self.log(ErrorLevel.FATAL, f"{filepath.name}: {e}")
         return result
 
-    def verify_project(self, directory: Path, dry_run: bool = False) -> int:
+    def verify_project(self, directory: Path, args: argparse.Namespace) -> int:
         self.load_spec(directory / 'spec.yaml')
         
         md_files = self.find_markdown_files(directory)
@@ -361,6 +377,7 @@ class MarkdownValidator:
         for filepath in md_files:
             if self.verbose:
                 self.log(ErrorLevel.INFO, f"Validating {filepath}...")
+            # --- MODIFIED: args object no longer needed here ---
             result = self.validate_file(filepath)
             status = "[PASS]"
             if result.has_errors:
@@ -371,12 +388,14 @@ class MarkdownValidator:
                 status = "[WARN]" if not result.has_errors else status
                 files_with_warnings += 1
                 total_warnings += len(result.warnings)
-            self.log(ErrorLevel.INFO, f"{status} {filepath.name}: {len(result.errors)} errors, {len(result.warnings)} warnings")
+            
+            if self.quiet and status == "[PASS]":
+                continue
+            
+            self.log(ErrorLevel.INFO, f"{status} {filepath.relative_to(directory)}: {len(result.errors)} errors, {len(result.warnings)} warnings")
 
-        self.log(ErrorLevel.INFO,
-                f"\nSummary: {len(md_files)} files validated, "
-                f"{files_with_errors} with fatal errors, "
-                f"{files_with_warnings} with warnings")
+        summary_msg = f"\nSummary: {len(md_files)} files validated, {files_with_errors} with fatal errors, {files_with_warnings} with warnings"
+        self.log(ErrorLevel.INFO, summary_msg)
 
         if total_errors > 0: return 2
         elif total_warnings > 0: return 1
@@ -464,7 +483,7 @@ def link_files(args):
 
     try:
         data = validator.links_spec
-        relative_path = os.path.relpath(target_path, start=source_path.parent)
+        relative_path = os.path.relpath(target_path, start=source_path.parent).replace(os.path.sep, '/')
 
         if 'established_links' not in data:
             data['established_links'] = {}
@@ -502,7 +521,7 @@ def display_links(args):
                 if source_file not in link_map:
                     link_map[source_file] = []
                 for target_link in targets:
-                    target_file = (source_file.parent / target_link).resolve()
+                    target_file = (source_file.parent / os.path.normpath(target_link)).resolve()
                     link_map[source_file].append({'target': target_file, 'type': 'Established'})
 
     md_files = validator.find_markdown_files(cwd)
@@ -514,7 +533,7 @@ def display_links(args):
                 if source_file not in link_map:
                     link_map[source_file] = []
                 for link in relative_links:
-                    target_file = (source_file.parent / link).resolve()
+                    target_file = (source_file.parent / os.path.normpath(link)).resolve()
                     link_map[source_file].append({'target': target_file, 'type': 'Physical'})
         except Exception as e:
             logger.error(f"Could not process {source_file}: {e}")
@@ -543,45 +562,71 @@ def display_links(args):
 
 def verify_project(args):
     validator = MarkdownValidator(verbose=args.verbose, quiet=args.quiet)
-    return validator.verify_project(Path.cwd(), dry_run=args.dry_run)
+    return validator.verify_project(Path.cwd(), args)
 
 
 def main():
-    parser = argparse.ArgumentParser(prog='md_validator', description='Markdown Validator CLI - A tool for Markdown document validation and management')
+    # --- MODIFIED: Main parser and sub-parsers now have more descriptive help text ---
+    parser = argparse.ArgumentParser(
+        prog='md_validator', 
+        description='A CLI tool for validating and managing Markdown documentation.',
+        formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument('--verbose', action='store_true', help='Enable detailed output for debugging')
     parser.add_argument('--quiet', action='store_true', help='Suppress non-error messages')
-    parser.add_argument('--dry-run', action='store_true', help='Perform validation without making any file changes')
 
     subparsers = parser.add_subparsers(dest='command', help='Available commands', required=True)
 
-    create_parser = subparsers.add_parser('create', help='Create a new Markdown file')
-    create_parser.add_argument('filename', help='Name of the file to create')
+    create_parser = subparsers.add_parser('create', help='Create a new Markdown file from a template.', description='Creates a new Markdown file from a basic template.')
+    create_parser.add_argument('filename', help='Path and name of the file to create (e.g., "docs/new_file.md")')
     create_parser.set_defaults(func=create_file)
 
-    read_parser = subparsers.add_parser('read', help='Print the content of a file')
+    read_parser = subparsers.add_parser('read', help='Print the content of a file to the console.', description='Prints the content of a Markdown file to the console.')
     read_parser.add_argument('filename', help='Name of the file to read')
     read_parser.set_defaults(func=read_file)
 
-    update_parser = subparsers.add_parser('update', help='Update a section in a file (placeholder)')
+    delete_parser = subparsers.add_parser('delete', help='Delete a specified Markdown file.', description='Deletes a specified Markdown file.')
+    delete_parser.add_argument('filename', help='Name of the file to delete')
+    delete_parser.set_defaults(func=delete_file)
+    
+    link_parser = subparsers.add_parser(
+        'link', 
+        help="Record a logical link in the source directory's links.yaml.",
+        description="Records a logical link between a source and target file.\nThis command adds an entry to the 'established_links' section of the\nsource directory's links.yaml, it does not modify the Markdown file itself.",
+        epilog=textwrap.dedent('''
+            example:
+              # Create a link from a file in 'domains' to a file in 'principles'
+              python md_validator.py link domains/business-arch.md principles/agility.md
+        '''),
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    link_parser.add_argument('source', help='The source Markdown file')
+    link_parser.add_argument('target', help='The target file or directory to link to')
+    link_parser.set_defaults(func=link_files)
+
+    verify_parser = subparsers.add_parser(
+        'verify', 
+        help='Validate all Markdown files in the project.',
+        description='Validates all Markdown files against project rules.\nChecks for structure (spec.yaml), broken links, link rule violations\n(allowed_targets), and missing required links.',
+        epilog=textwrap.dedent('''
+            By default, `verify` will warn if a directory with Markdown files is missing a links.yaml.
+            An exit code of 0 means success, 1 means warnings were found, and 2 means fatal errors occurred.
+        '''),
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    # --- MODIFIED: Removed the --require-link-spec flag ---
+    verify_parser.set_defaults(func=verify_project)
+    
+    display_parser = subparsers.add_parser('display-links', help='Display a map of all links.', description='Scans the project and displays a map of all links, including\nPhysical links found in .md files and Established links from links.yaml files.')
+    display_parser.set_defaults(func=display_links)
+
+    # Placeholder for 'update' command
+    update_parser = subparsers.add_parser('update', help='Update a section in a file (placeholder).')
     update_parser.add_argument('filename', help='Name of the file to update')
     update_parser.add_argument('section_name', help='Name of the section to update')
     update_parser.add_argument('content', help='New content for the section')
     update_parser.set_defaults(func=update_file)
 
-    delete_parser = subparsers.add_parser('delete', help='Delete a file')
-    delete_parser.add_argument('filename', help='Name of the file to delete')
-    delete_parser.set_defaults(func=delete_file)
-    
-    link_parser = subparsers.add_parser('link', help="Record a link in the source directory's links.yaml")
-    link_parser.add_argument('source', help='The source Markdown file')
-    link_parser.add_argument('target', help='The target file or directory to link to')
-    link_parser.set_defaults(func=link_files)
-
-    verify_parser = subparsers.add_parser('verify', help='Validate all Markdown files in the project')
-    verify_parser.set_defaults(func=verify_project)
-    
-    display_parser = subparsers.add_parser('display-links', help='Display a map of all physical and established links')
-    display_parser.set_defaults(func=display_links)
 
     args = parser.parse_args()
     if hasattr(args, 'func'):
