@@ -1,0 +1,15 @@
+allowed_targets:
+- directory: ../rules
+  filename_regex: .*\.md$
+established_links:
+  identity-lifecycle.md:
+  - ../rules/integratable.md
+  - ../rules/securable.md
+  cloud-alignment.md:
+  - ../rules/integratable.md
+  - ../rules/reproducible.md
+  - ../rules/securable.md
+  pam-compliance.md:
+  - ../rules/reproducible.md
+  - ../rules/securable.md
+  - ../rules/integratable.md
