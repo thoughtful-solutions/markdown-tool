@@ -232,18 +232,17 @@ class MarkdownValidator:
                 self.log(ErrorLevel.INFO, f"  Step {step_idx + 1} MATCHED (Consumed: {consumed}). New Index: {current_index}")
             # --- NEW VERBOSE DEBUGGING END ---
 
-            # Skip related tokens (e.g., inline, close tags)
-            if tokens[current_index - 1].type in ['heading_open', 'paragraph_open', 'list_item_open']: # ADDED 'list_item_open'
-                # The logic must be smarter to skip the full list item content
-                # when Block 5 matches the list_item_open
+# Skip related tokens (e.g., inline, close tags)
+            if tokens[current_index - 1].type in ['heading_open', 'paragraph_open', 'list_item_open']: 
                 
-                # Check if the current block started with a list_item_open
+                # Check if the current block requires complex skipping (i.e., a list item)
                 started_with_list_item = any(s['type'] == 'list_item_open' for s in sequence)
                 
-                if started_with_list_item:
+                # REVISION START: Only apply complex skipping if we've matched the final step of the block.
+                # If step_idx + 1 is less than len(sequence), we have more steps to match in this block.
+                if started_with_list_item and step_idx + 1 == len(sequence):
                     # Look for the closing list_item_close token, which signifies the end
                     # of the element we just started consuming.
-                    # We are intentionally leaving the parent bullet_list_close for the next block to handle
                     list_item_depth = 1
                     initial_index_for_skip = current_index
                     while current_index < len(tokens):
@@ -263,9 +262,10 @@ class MarkdownValidator:
                                 break
                         
                         current_index += 1
+                # REVISION END: The 'else' block below handles all other cases (including list item content processing now)
                 
-                # Default skipping logic for headings/paragraphs
-                else:
+                # Default skipping logic for all others (headings, paragraphs, AND list item content)
+                elif not started_with_list_item or step_idx + 1 == len(sequence):
                     initial_index_for_skip = current_index
                     while current_index < len(tokens):
                         if tokens[current_index].type in ['inline', 'heading_close', 'paragraph_close']:
@@ -276,7 +276,7 @@ class MarkdownValidator:
                                 self.log(ErrorLevel.INFO, f"  Skipped {current_index - initial_index_for_skip} tokens (Inline/Close). Next: {tokens[current_index].type}")
                             # --- NEW VERBOSE DEBUGGING END ---
                             break
-                    
+                                            
         return current_index - token_index, None
     
     def validate_structure(self, filepath: Path, content: str, result: ValidationResult) -> bool:

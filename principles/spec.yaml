@@ -1,0 +1,187 @@
+structure:
+  
+  # Block 1: H1 Title (e.g., # P: Principle Name)
+  # Simplified to rely on aggressive skipping consuming the inline and close tags.
+  - description: H1 Principle Title (e.g., # P: Resiliency)
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 1
+        
+  # --- Definition Section ---
+  # Block 2: H2 Definition Heading (## Definition) - SIMPLIFIED FIX
+  - description: H2 Definition Heading (## Definition)
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Definition$' # Checks the inline token immediately following.
+        
+  # Block 3: Definition Paragraph - SIMPLIFIED FIX
+  - description: Definition Paragraph
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: paragraph_open # Relies on aggressive skipping to consume inline/close tags.
+        
+  # --- Rationale Section ---
+  # Block 4: H2 Rationale Heading (## Rationale) - SIMPLIFIED FIX
+  - description: H2 Rationale Heading (## Rationale)
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Rationale$'
+
+  # Block 5: Rationale Paragraph - SIMPLIFIED FIX
+  - description: Rationale Paragraph
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: paragraph_open
+        
+  # --- Implications Section ---
+  # Block 6: H2 Implications Heading (## Implications) - SIMPLIFIED FIX
+  - description: H2 Implications Heading (## Implications)
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Implications$'
+      
+  # Block 7: Implications Unordered List Open
+  - description: Implications Unordered List Open
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_open
+      
+  # Block 8a: List Item - Business (NOW ENFORCES CONTENT)
+  - description: List Item - Business Implication (Must be first, check content)
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '^\*\*Business\*\*:'
+      
+  # Block 8b: List Item - Application (NOW ENFORCES CONTENT)
+  - description: List Item - Application Implication
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '^\*\*Application\*\*:'
+
+  # Block 8c: List Item - Data (NOW ENFORCES CONTENT)
+  # This block will now FAIL for sustainability.md because the content is "Datd"
+  - description: List Item - Data Implication
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '^\*\*Data\*\*:' # STRICTLY REQUIRES **Data**:
+
+  # Block 8d: List Item - Technology (NOW ENFORCES CONTENT)
+  - description: List Item - Technology Implication
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+      - type: paragraph_open
+        content_regex: '^\*\*Technology\*\*:'
+      
+  # Block 9: Implications Unordered List Close
+  - description: Implications Unordered List Close
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_close
+      
+  # --- Metrics Section ---
+  # Block 10: H2 Metrics Heading (## Metrics) - SIMPLIFIED FIX
+  - description: H2 Metrics Heading (## Metrics)
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Metrics$'
+      
+  # Block 11: Metrics List (bullet_list_open)
+  - description: Metrics Unordered List Open
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_open
+      
+  # Block 12: Metrics List Items - SIMPLIFIED FIX
+  - description: Metrics List Items
+    min_occurrences: 3 
+    max_occurrences: null 
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+      
+  # Block 13: Metrics List (bullet_list_close)
+  - description: Metrics Unordered List Close
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_close
+      
+  # --- Implementation Guidelines Section ---
+  # Block 14: H2 Implementation Guidelines Heading (## Implementation Guidelines) - SIMPLIFIED FIX
+  - description: H2 Implementation Guidelines Heading (## Implementation Guidelines)
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Implementation Guidelines$'
+      
+  # Block 15: Guidelines List (bullet_list_open)
+  - description: Guidelines Unordered List Open
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_open
+      
+  # Block 16: Guidelines List Items - SIMPLIFIED FIX
+  - description: Guidelines List Items
+    min_occurrences: 3 
+    max_occurrences: null 
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+      
+  # Block 17: Guidelines List (bullet_list_close)
+  - description: Guidelines Unordered List Close
+    min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_close
