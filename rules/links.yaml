@@ -1,6 +1,8 @@
 allowed_targets:
 - directory: ../principles
   filename_regex: .*\.md$
+- directory: ../verification
+  filename_regex: .*\.md$
 established_links:
   discoverable.md:
   - ../principles/business-alignment.md
@@ -11,10 +13,18 @@ established_links:
   - ../principles/resiliency.md
   - ../principles/agility.md
   - ../principles/interoperability.md
+  - ../verification/cloud-alignment.md
+  - ../verification/pam-compliance.md
   securable.md:
   - ../principles/resiliency.md
   - ../principles/supportability.md
+  - ../verification/identity-lifecycle.md
+  - ../verification/cloud-alignment.md
+  - ../verification/pam-compliance.md
   integratable.md:
   - ../principles/agility.md
   - ../principles/supportability.md
   - ../principles/interoperability.md
+  - ../verification/identity-lifecycle.md
+  - ../verification/cloud-alignment.md
+  - ../verification/pam-compliance.md

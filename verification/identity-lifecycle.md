@@ -1,26 +1,37 @@
-# V: Identity Adherence
+# V: Identity Lifecycle Management
 
 ## Description
 
-Audits all integrated SaaS applications to ensure they are managed via the central Identity Provider (IdP), which is the only permitted way to manage authentication. This prevents orphaned accounts and ensures consistent, auditable, and fine-grained access control across the application portfolio.
+Verifies that the Joiner, Mover, and Leaver (JML) processes for all human and non-human identities are timely, automated, and auditable. This process is essential for preventing security risks like "orphaned user or machine accounts" and mitigating the "delayed revocation of access for departing employees or retired services". It ensures identity is managed centrally, strengthening security and enabling consistent governance.
 
 ## Metadata
 - **Category**: Security
 - **Display Control**: Traffic Light
 - **Thresholds**:
-    - **Green**: > 99% 
-    - **Amber**: 95% - 98% 
-    - **Red**: < 95% 
+    - **Green**: > 99.5% 
+    - **Amber**: 98% - 99.5%
+    - **Red**:  < 98%
 - **Maturity Level**: Medium
 
 ## Features
 ```gherkin
-FEATURE: SaaS Integration Audit
+FEATURE: Automated Identity Lifecycle Audits
 
-  SCENARIO: Generate an inventory of Enterprise Applications used for SSO
-    GIVEN I am authenticated with elevated permissions to the Entra ID tenant
-    WHEN I request the list of all HTTP-Auth Applications
-    THEN the system must provide a report detailing each Application Name and its SSO Status
-    AND the report must be saved as a CSV file for auditing
+  SCENARIO: Timely revocation of access for leavers
+    GIVEN the master list of departed employees or retired services
+    WHEN the central Identity Provider's logs are audited for the corresponding identities
+    THEN each identity's access must be fully disabled within the defined SLA (e.g., 24 hours)
+
+  SCENARIO: Correct initial access for joiners
+    GIVEN the list of new employees or services and their assigned roles
+    WHEN their provisioned access rights in the central IdP are checked
+    THEN the assigned permissions must match the pre-approved "birthright" access for that role and not exceed it
+
+  SCENARIO: Appropriate access adjustment for movers
+    GIVEN an employee has moved to a new role within the organisation
+    WHEN their identity's access permissions are audited after 72 hours
+    THEN permissions from their previous role must be revoked
+    AND permissions for their new role must be correctly assigned
 ```
+
 
