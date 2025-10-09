@@ -202,7 +202,6 @@ class MarkdownValidator:
 
         local_links = local_validator.links_spec.get('established_links', {})
         
-        # Part 1: Check all outgoing links from the current directory
         for source_name, targets in local_links.items():
             for target_link in targets:
                 try:
@@ -221,7 +220,6 @@ class MarkdownValidator:
 
                 except FileNotFoundError: continue
 
-        # Part 2: Check incoming links from directories mentioned in allowed_targets
         remote_dirs_to_check: Set[Path] = set()
         if 'allowed_targets' in local_validator.links_spec:
             for rule in local_validator.links_spec['allowed_targets']:
@@ -252,7 +250,6 @@ class MarkdownValidator:
         return sorted(list(warnings))
 
     def verify_project(self, directory: Path, project_root: Path, args: argparse.Namespace) -> int:
-        # --- MODIFIED: Use resolved path for the local directory scan ---
         resolved_local_dir = directory.resolve()
         
         md_files = self.find_markdown_files(resolved_local_dir, recursive=False)
@@ -276,7 +273,6 @@ class MarkdownValidator:
                 
                 if self.quiet and status == "[PASS]" and not result.has_warnings: continue
                 
-                # This comparison is now between a resolved filepath and a resolved project_root
                 self.log(ErrorLevel.INFO, f"{status} {filepath.relative_to(project_root)}: {len(result.errors)} errors, {len(result.warnings)} warnings")
         else:
             self.log(ErrorLevel.INFO, f"No Markdown files found in {resolved_local_dir}")
@@ -326,73 +322,143 @@ def delete_file(args):
     except Exception as e: logger.error(f"[FATAL] Failed to delete file: {e}"); return 2
 
 def link_files(args):
-    source_path, target_path = Path(args.source), Path(args.target)
+    source_path = Path(args.source)
+    target_path = Path(args.target)
+
     if not source_path.is_file(): logger.error(f"[FATAL] Source file not found: {source_path}"); return 2
     if not target_path.exists(): logger.error(f"[FATAL] Target path does not exist: {target_path}"); return 2
 
-    links_spec_path = source_path.parent / 'links.yaml'
-    validator = MarkdownValidator()
-    validator.load_links_spec(links_spec_path)
+    source_spec_path = source_path.resolve().parent / 'links.yaml'
+    target_spec_path = target_path.resolve().parent / 'links.yaml'
+    
+    source_data = {}
+    if source_spec_path.exists():
+        with open(source_spec_path, 'r', encoding='utf-8') as f:
+            source_data = yaml.safe_load(f) or {}
+            
+    target_data = {}
+    if target_spec_path.exists():
+        with open(target_spec_path, 'r', encoding='utf-8') as f:
+            target_data = yaml.safe_load(f) or {}
 
-    if not validator.links_spec or 'allowed_targets' not in validator.links_spec:
-        logger.error(f"[FATAL] {links_spec_path} is missing 'allowed_targets' section or does not exist."); return 2
-
-    link_is_valid = False
-    for rule in validator.links_spec['allowed_targets']:
+    # --- FORWARD LINK (A -> B) ---
+    forward_rel_path = os.path.relpath(target_path.resolve(), start=source_path.resolve().parent).replace(os.path.sep, '/')
+    
+    is_allowed = False
+    for rule in source_data.get('allowed_targets', []):
         try:
-            target_dir_rule = (source_path.parent / rule['directory']).resolve()
-            if target_path.resolve().parent == target_dir_rule and re.compile(rule['filename_regex']).match(target_path.name):
-                link_is_valid = True; break
-        except Exception: continue
-    if not link_is_valid:
-        logger.error(f"[FATAL] Link from '{source_path.name}' to '{target_path.name}' is not allowed by the rules in {links_spec_path}."); return 2
-
-    try:
-        data = validator.links_spec
-        relative_path = os.path.relpath(target_path, start=source_path.parent).replace(os.path.sep, '/')
-        data.setdefault('established_links', {}).setdefault(source_path.name, [])
-        if relative_path not in data['established_links'][source_path.name]:
-            data['established_links'][source_path.name].append(relative_path)
-            with open(links_spec_path, 'w', encoding='utf-8') as f:
-                yaml.dump(data, f, sort_keys=False, default_flow_style=False, indent=2)
-            logger.info(f"[INFO] Link from '{source_path.name}' to '{target_path.name}' recorded in {links_spec_path.name}")
+            if target_path.resolve().parent == (source_path.resolve().parent / rule['directory']).resolve():
+                is_allowed = True; break
+        except: continue
+        
+    if not is_allowed:
+        if args.force:
+            rule_dir = os.path.relpath(target_path.resolve().parent, start=source_path.resolve().parent).replace(os.path.sep, '/')
+            new_rule = {'directory': rule_dir, 'filename_regex': '.*\\.md$'}
+            source_data.setdefault('allowed_targets', []).append(new_rule)
+            logger.info(f"[INFO] Force: Added new rule to {source_spec_path.name} for directory '{rule_dir}'")
         else:
-            logger.info(f"[INFO] Link already exists.")
+            logger.error(f"[FATAL] Link from '{source_path.name}' to '{target_path.name}' is not allowed by rules in {source_spec_path.name}. Use --force to update rules."); return 2
+            
+    source_links = source_data.setdefault('established_links', {}).setdefault(source_path.name, [])
+    if forward_rel_path not in source_links:
+        source_links.append(forward_rel_path)
+        
+    # --- REVERSE LINK (B -> A) ---
+    if args.force:
+        reverse_rel_path = os.path.relpath(source_path.resolve(), start=target_path.resolve().parent).replace(os.path.sep, '/')
+        
+        is_allowed_reverse = False
+        for rule in target_data.get('allowed_targets', []):
+            try:
+                if source_path.resolve().parent == (target_path.resolve().parent / rule['directory']).resolve():
+                    is_allowed_reverse = True; break
+            except: continue
+        
+        if not is_allowed_reverse:
+            rule_dir = os.path.relpath(source_path.resolve().parent, start=target_path.resolve().parent).replace(os.path.sep, '/')
+            new_rule = {'directory': rule_dir, 'filename_regex': '.*\\.md$'}
+            target_data.setdefault('allowed_targets', []).append(new_rule)
+            logger.info(f"[INFO] Force: Added new rule to {target_spec_path.name} for directory '{rule_dir}'")
+            
+        target_links = target_data.setdefault('established_links', {}).setdefault(target_path.name, [])
+        if reverse_rel_path not in target_links:
+            target_links.append(reverse_rel_path)
+            
+    try:
+        with open(source_spec_path, 'w', encoding='utf-8') as f:
+            yaml.dump(source_data, f, sort_keys=False, default_flow_style=False, indent=2)
+        logger.info(f"[INFO] Updated {source_spec_path.name}")
+        
+        if args.force:
+            with open(target_spec_path, 'w', encoding='utf-8') as f:
+                yaml.dump(target_data, f, sort_keys=False, default_flow_style=False, indent=2)
+            logger.info(f"[INFO] Updated {target_spec_path.name}")
+        
         return 0
-    except Exception as e: logger.error(f"[FATAL] Failed to record link: {e}"); return 2
+    except Exception as e: logger.error(f"[FATAL] Failed to write link file(s): {e}"); return 2
+
+def _remove_link_entry(spec_path: Path, source_name: str, target_rel_path: str) -> bool:
+    """Helper to remove a single link entry from a given spec file."""
+    if not spec_path.exists():
+        return False
+        
+    with open(spec_path, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f) or {}
+
+    if 'established_links' not in data or source_name not in data['established_links']:
+        return False
+
+    link_to_remove = None
+    for link in data['established_links'][source_name]:
+        if os.path.normpath(link).replace(os.path.sep, '/') == target_rel_path:
+            link_to_remove = link
+            break
+            
+    if link_to_remove:
+        data['established_links'][source_name].remove(link_to_remove)
+        if not data['established_links'][source_name]: del data['established_links'][source_name]
+        if not data['established_links']: del data['established_links']
+        
+        with open(spec_path, 'w', encoding='utf-8') as f:
+            yaml.dump(data, f, sort_keys=False, default_flow_style=False, indent=2)
+        return True
+        
+    return False
 
 def unlink_files(args):
-    """Removes an established link from the source directory's links.yaml."""
-    source_path_arg = Path(args.source)
-    if not source_path_arg.is_file(): logger.error(f"[FATAL] Source file not found: {source_path_arg}"); return 2
-    
-    source_path_abs, target_path_abs = source_path_arg.resolve(), (Path.cwd() / args.target).resolve(strict=False)
-    links_spec_path = source_path_abs.parent / 'links.yaml'
-    if not links_spec_path.exists(): logger.error(f"[FATAL] Cannot remove link: {links_spec_path} does not exist."); return 2
+    """Removes an established link, and optionally the reverse link if --force is used."""
+    source_path = Path(args.source)
+    target_path = Path(args.target)
 
-    try:
-        with open(links_spec_path, 'r', encoding='utf-8') as f: data = yaml.safe_load(f) or {}
-        source_filename = source_path_abs.name
-        if 'established_links' not in data or source_filename not in data['established_links']:
-            logger.info(f"[INFO] No established links found for '{source_filename}' to remove."); return 0
+    if not source_path.is_file():
+        logger.error(f"[FATAL] Source file not found: {source_path}")
+        return 2
+
+    # Remove forward link (A -> B)
+    source_abs = source_path.resolve()
+    target_abs = (Path.cwd() / target_path).resolve(strict=False)
+    forward_rel_path = os.path.normpath(os.path.relpath(target_abs, start=source_abs.parent)).replace(os.path.sep, '/')
+    
+    was_removed = _remove_link_entry(source_abs.parent / 'links.yaml', source_abs.name, forward_rel_path)
+    if was_removed:
+        logger.info(f"[INFO] Link from '{source_path.name}' to '{target_path.name}' removed.")
+    else:
+        logger.info(f"[INFO] Link from '{source_path.name}' to '{target_path.name}' not found.")
+
+    # Remove reverse link (B -> A) if --force
+    if args.force:
+        if not target_path.exists():
+            logger.warning(f"[WARN] Target file {target_path} does not exist. Cannot remove reverse link.")
+            return 0
+            
+        reverse_rel_path = os.path.normpath(os.path.relpath(source_abs, start=target_abs.parent)).replace(os.path.sep, '/')
+        was_reverse_removed = _remove_link_entry(target_abs.parent / 'links.yaml', target_abs.name, reverse_rel_path)
         
-        path_to_find = os.path.normpath(os.path.relpath(target_path_abs, start=source_path_abs.parent)).replace(os.path.sep, '/')
-        link_to_remove = None
-        for link in data['established_links'][source_filename]:
-            if os.path.normpath(link).replace(os.path.sep, '/') == path_to_find:
-                link_to_remove = link; break
-        
-        if link_to_remove:
-            data['established_links'][source_filename].remove(link_to_remove)
-            if not data['established_links'][source_filename]: del data['established_links'][source_filename]
-            if not data['established_links']: del data['established_links']
-            with open(links_spec_path, 'w', encoding='utf-8') as f:
-                yaml.dump(data, f, sort_keys=False, default_flow_style=False, indent=2)
-            logger.info(f"[INFO] Link from '{source_filename}' to '{Path(args.target).name}' removed.")
-        else:
-            logger.info(f"[INFO] Link from '{source_filename}' to '{Path(args.target).name}' not found.")
-        return 0
-    except Exception as e: logger.error(f"[FATAL] Failed to remove link: {e}"); return 2
+        if was_reverse_removed:
+            logger.info(f"[INFO] Force: Reverse link from '{target_path.name}' to '{source_path.name}' removed.")
+    
+    return 0
 
 def update_bidirectional_links(args):
     """Scans all links.yaml files and adds missing reverse links and rules."""
@@ -532,6 +598,7 @@ def main():
         '''), formatter_class=argparse.RawTextHelpFormatter)
     link_parser.add_argument('source', help='The source Markdown file')
     link_parser.add_argument('target', help='The target file or directory')
+    link_parser.add_argument('-f', '--force', action='store_true', help='Force link creation by adding rules and creating back-links.')
     link_parser.set_defaults(func=link_files)
 
     unlink_parser = subparsers.add_parser('unlink', help="Remove an established link from a links.yaml file.", epilog=textwrap.dedent('''
@@ -540,6 +607,8 @@ def main():
         '''), formatter_class=argparse.RawTextHelpFormatter)
     unlink_parser.add_argument('source', help='The source file of the link')
     unlink_parser.add_argument('target', help='The target file of the link to remove')
+    # --- MODIFIED: Added --force flag ---
+    unlink_parser.add_argument('-f', '--force', action='store_true', help='Force unlink by removing the reverse link from the target file.')
     unlink_parser.set_defaults(func=unlink_files)
 
     verify_parser = subparsers.add_parser('verify', help='Validate all Markdown files in the local directory.', epilog=textwrap.dedent('''

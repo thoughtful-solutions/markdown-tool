@@ -1,19 +1,28 @@
 allowed_targets:
 - directory: ../domains
   filename_regex: .*\.md$
+- directory: ../rules
+  filename_regex: .*\.md$
 established_links:
   sustainability.md:
   - ../domains/business-architecture.md
   resiliency.md:
   - ../domains/business-architecture.md
   - ../domains/technology-architecture.md
+  - ../rules/integratable.md
+  - ../rules/reproducible.md
   agility.md:
   - ../domains/business-architecture.md
   - ../domains/technology-architecture.md
+  - ../rules/integratable.md
+  - ../rules/reproducible.md
   business-alignment.md:
   - ../domains/business-architecture.md
   - ../domains/technology-architecture.md
+  - ../rules/discoverable.md
   supportability.md:
   - ../domains/technology-architecture.md
   interoperability.md:
   - ../domains/technology-architecture.md
+  - ../rules/integratable.md
+  - ../rules/reproducible.md
