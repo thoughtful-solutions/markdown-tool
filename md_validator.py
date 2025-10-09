@@ -349,7 +349,6 @@ class MarkdownValidator:
                 content = f.read()
             
             spec_loaded = self.load_links_spec(filepath.parent / 'links.yaml')
-            # --- MODIFIED: The check for missing links.yaml is now the default behavior ---
             if not spec_loaded:
                 message = "Missing links.yaml in directory"
                 result.warnings.append(message)
@@ -377,7 +376,6 @@ class MarkdownValidator:
         for filepath in md_files:
             if self.verbose:
                 self.log(ErrorLevel.INFO, f"Validating {filepath}...")
-            # --- MODIFIED: args object no longer needed here ---
             result = self.validate_file(filepath)
             status = "[PASS]"
             if result.has_errors:
@@ -427,14 +425,6 @@ def read_file(args):
     except Exception as e:
         logger.error(f"[FATAL] Failed to read file: {e}")
         return 2
-
-def update_file(args):
-    filepath = Path(args.filename)
-    if not filepath.exists():
-        logger.error(f"[FATAL] File not found: {filepath}")
-        return 2
-    logger.info(f"[INFO] Update command logged for {filepath}, Section: {args.section_name}")
-    return 0
 
 def delete_file(args):
     filepath = Path(args.filename)
@@ -507,6 +497,63 @@ def link_files(args):
         logger.error(f"[FATAL] Failed to record link: {e}")
         return 2
 
+def unlink_files(args):
+    """Removes an established link from the source directory's links.yaml."""
+    source_path_arg = Path(args.source)
+    if not source_path_arg.is_file():
+        logger.error(f"[FATAL] Source file not found: {source_path_arg}")
+        return 2
+    
+    source_path_abs = source_path_arg.resolve()
+    target_path_abs = (Path.cwd() / args.target).resolve(strict=False)
+    
+    links_spec_path = source_path_abs.parent / 'links.yaml'
+    if not links_spec_path.exists():
+        logger.error(f"[FATAL] Cannot remove link: {links_spec_path} does not exist.")
+        return 2
+
+    try:
+        with open(links_spec_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f) or {}
+
+        source_filename = source_path_abs.name
+        if 'established_links' not in data or source_filename not in data['established_links']:
+            logger.info(f"[INFO] No established links found for '{source_filename}' to remove.")
+            return 0
+        
+        # --- MODIFIED: Normalize paths before comparing to handle mixed slashes ---
+        path_to_find = os.path.normpath(os.path.relpath(target_path_abs, start=source_path_abs.parent)).replace(os.path.sep, '/')
+        
+        link_to_remove = None
+        for link in data['established_links'][source_filename]:
+            normalized_existing_link = os.path.normpath(link).replace(os.path.sep, '/')
+            if normalized_existing_link == path_to_find:
+                link_to_remove = link
+                break
+        
+        if link_to_remove:
+            data['established_links'][source_filename].remove(link_to_remove)
+            
+            if not data['established_links'][source_filename]:
+                del data['established_links'][source_filename]
+            
+            if not data['established_links']:
+                del data['established_links']
+            
+            with open(links_spec_path, 'w', encoding='utf-8') as f:
+                yaml.dump(data, f, sort_keys=False, default_flow_style=False, indent=2)
+            
+            logger.info(f"[INFO] Link from '{source_filename}' to '{Path(args.target).name}' removed.")
+        else:
+            logger.info(f"[INFO] Link from '{source_filename}' to '{Path(args.target).name}' not found.")
+            
+        return 0
+
+    except Exception as e:
+        logger.error(f"[FATAL] Failed to remove link: {e}")
+        return 2
+
+
 def display_links(args):
     validator = MarkdownValidator()
     cwd = Path.cwd()
@@ -566,7 +613,6 @@ def verify_project(args):
 
 
 def main():
-    # --- MODIFIED: Main parser and sub-parsers now have more descriptive help text ---
     parser = argparse.ArgumentParser(
         prog='md_validator', 
         description='A CLI tool for validating and managing Markdown documentation.',
@@ -604,6 +650,21 @@ def main():
     link_parser.add_argument('target', help='The target file or directory to link to')
     link_parser.set_defaults(func=link_files)
 
+    unlink_parser = subparsers.add_parser(
+        'unlink',
+        help="Remove an established link from the source directory's links.yaml.",
+        description="Removes an established link record from the 'established_links' section\nof the source directory's links.yaml file.",
+        epilog=textwrap.dedent('''
+            example:
+              # Remove a link from a file in 'domains' to a file in 'principles'
+              python md_validator.py unlink domains/business-arch.md principles/agility.md
+        '''),
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    unlink_parser.add_argument('source', help='The source Markdown file of the link')
+    unlink_parser.add_argument('target', help='The target file of the link to be removed')
+    unlink_parser.set_defaults(func=unlink_files)
+
     verify_parser = subparsers.add_parser(
         'verify', 
         help='Validate all Markdown files in the project.',
@@ -614,19 +675,10 @@ def main():
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
-    # --- MODIFIED: Removed the --require-link-spec flag ---
     verify_parser.set_defaults(func=verify_project)
     
     display_parser = subparsers.add_parser('display-links', help='Display a map of all links.', description='Scans the project and displays a map of all links, including\nPhysical links found in .md files and Established links from links.yaml files.')
     display_parser.set_defaults(func=display_links)
-
-    # Placeholder for 'update' command
-    update_parser = subparsers.add_parser('update', help='Update a section in a file (placeholder).')
-    update_parser.add_argument('filename', help='Name of the file to update')
-    update_parser.add_argument('section_name', help='Name of the section to update')
-    update_parser.add_argument('content', help='New content for the section')
-    update_parser.set_defaults(func=update_file)
-
 
     args = parser.parse_args()
     if hasattr(args, 'func'):
