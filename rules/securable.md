@@ -1,4 +1,4 @@
-# S: Securable
+# R: Securable
 
 ## Definition
 
