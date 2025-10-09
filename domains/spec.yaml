@@ -1,0 +1,121 @@
+# spec.yaml for Architecture Domain Documentation
+
+structure:
+  # Block 1: Document must start with H1 heading beginning with "D: "
+  - min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 1
+        content_regex: '^D:\s+\w+'
+
+  # Block 2: Definition section (required)
+  - min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Definition$'
+      - type: paragraph_open
+
+  # Block 3: Purpose section (required) - Matches H2 and list open
+  - min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 2
+        content_regex: '^Purpose$'
+      - type: bullet_list_open
+
+  # Block 4 (REPETITION): Generic List Item (Repeatable for Purpose, Deliverables, etc.)
+  # FIX: Only match list_item_open.
+  - min_occurrences: 1
+    max_occurrences: 10
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+
+  # Block 5: Scope section (required) - Closes previous list (Purpose) and opens Scope list
+  - min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_close # Closes Purpose list
+      - type: heading_open
+        level: 2
+        content_regex: '^Scope$'
+      - type: bullet_list_open # Opens Scope list
+
+  # Block 6 (REPETITION): Subsections within Scope (optional) - The Scope section has H3/bolded items which are treated as list items.
+  # FIX: Only match list_item_open.
+  - min_occurrences: 0
+    max_occurrences: 10
+    error_level: WARN
+    sequence:
+      - type: list_item_open
+
+  # Block 7: Deliverables section (required) - Closes previous list (Scope) and opens Deliverables list
+  - min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_close # Closes Scope list
+      - type: heading_open
+        level: 2
+        content_regex: '^Deliverables$'
+      - type: bullet_list_open # Opens Deliverables list
+
+  # Block 8 (REPETITION): Generic List Item (Repeatable for Deliverables) - THIS WAS THE MISSING STEP!
+  - min_occurrences: 1
+    max_occurrences: 10
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+
+  # Block 9: Data Sources section (required) - Closes previous list (Deliverables) and opens Data Sources list
+  - min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_close # Closes Deliverables list
+      - type: heading_open
+        level: 2
+        content_regex: '^Data Sources$'
+      - type: bullet_list_open # Opens Data Sources list
+
+  # Block 10 (REPETITION): Generic List Item (Repeatable for Data Sources)
+  - min_occurrences: 1
+    max_occurrences: 10
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+
+  # Block 11: Stakeholders section (required) - Closes previous list (Data Sources) and opens Stakeholders list
+  - min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: bullet_list_close # Closes Data Sources list
+      - type: heading_open
+        level: 2
+        content_regex: '^Stakeholders$'
+      - type: bullet_list_open # Opens Stakeholders list
+
+  # Block 12 (REPETITION): Generic List Item (Repeatable for Stakeholders)
+  - min_occurrences: 1
+    max_occurrences: 10
+    error_level: FATAL
+    sequence:
+      - type: list_item_open
+
+  # Block 13: Additional H2 sections (optional for extensibility) - Must close the final Stakeholders list first.
+  - min_occurrences: 0
+    max_occurrences: null
+    error_level: WARN
+    sequence:
+      - type: bullet_list_close # Closes Stakeholders list
+      - type: heading_open
+        level: 2

@@ -199,22 +199,84 @@ class MarkdownValidator:
         sequence = block['sequence']
         current_index = token_index
         
+        # --- NEW VERBOSE DEBUGGING START ---
+        if self.verbose:
+            block_num = self.spec['structure'].index(block) + 1
+            self.log(ErrorLevel.INFO, f"--- DEBUG: Starting Block {block_num} ---")
+            self.log(ErrorLevel.INFO, f"Initial Token Index: {token_index}, Total Tokens: {len(tokens)}")
+        # --- NEW VERBOSE DEBUGGING END ---
+        
         for step_idx, step in enumerate(sequence):
+            # --- NEW VERBOSE DEBUGGING START ---
+            if self.verbose:
+                token_type = tokens[current_index].type if current_index < len(tokens) else 'EOF'
+                self.log(ErrorLevel.INFO, f"  Step {step_idx + 1}: Expected Type: {step.get('type', 'N/A')}, Found Index {current_index} Token Type: {token_type}")
+                if 'content_regex' in step:
+                     self.log(ErrorLevel.INFO, f"  Step {step_idx + 1}: Expected Content Regex: {step['content_regex']}")
+            # --- NEW VERBOSE DEBUGGING END ---
+
             success, consumed, error = self.validate_sequence_step(tokens, current_index, step)
             
             if not success:
+                # --- NEW VERBOSE DEBUGGING START ---
+                if self.verbose:
+                    token_info = tokens[current_index].as_dict() if current_index < len(tokens) else 'EOF'
+                    self.log(ErrorLevel.INFO, f"  Step {step_idx + 1} FAILED. Error: {error}. Token details: {token_info}")
+                # --- NEW VERBOSE DEBUGGING END ---
                 return 0, f"step {step_idx + 1}: {error}"
             
             current_index += consumed
             
-            # Skip related tokens (e.g., inline after heading_open)
-            if tokens[current_index - 1].type in ['heading_open', 'paragraph_open']:
-                while current_index < len(tokens):
-                    if tokens[current_index].type in ['inline', 'heading_close', 'paragraph_close']:
+            # --- NEW VERBOSE DEBUGGING START ---
+            if self.verbose:
+                self.log(ErrorLevel.INFO, f"  Step {step_idx + 1} MATCHED (Consumed: {consumed}). New Index: {current_index}")
+            # --- NEW VERBOSE DEBUGGING END ---
+
+            # Skip related tokens (e.g., inline, close tags)
+            if tokens[current_index - 1].type in ['heading_open', 'paragraph_open', 'list_item_open']: # ADDED 'list_item_open'
+                # The logic must be smarter to skip the full list item content
+                # when Block 5 matches the list_item_open
+                
+                # Check if the current block started with a list_item_open
+                started_with_list_item = any(s['type'] == 'list_item_open' for s in sequence)
+                
+                if started_with_list_item:
+                    # Look for the closing list_item_close token, which signifies the end
+                    # of the element we just started consuming.
+                    # We are intentionally leaving the parent bullet_list_close for the next block to handle
+                    list_item_depth = 1
+                    initial_index_for_skip = current_index
+                    while current_index < len(tokens):
+                        token = tokens[current_index]
+                        
+                        if token.type == 'list_item_open':
+                            list_item_depth += 1
+                        elif token.type == 'list_item_close':
+                            list_item_depth -= 1
+                            if list_item_depth == 0:
+                                # Consume the closing token and break
+                                current_index += 1
+                                # --- NEW VERBOSE DEBUGGING START ---
+                                if self.verbose:
+                                    self.log(ErrorLevel.INFO, f"  Skipped {current_index - initial_index_for_skip} tokens until list_item_close.")
+                                # --- NEW VERBOSE DEBUGGING END ---
+                                break
+                        
                         current_index += 1
-                    else:
-                        break
-        
+                
+                # Default skipping logic for headings/paragraphs
+                else:
+                    initial_index_for_skip = current_index
+                    while current_index < len(tokens):
+                        if tokens[current_index].type in ['inline', 'heading_close', 'paragraph_close']:
+                            current_index += 1
+                        else:
+                            # --- NEW VERBOSE DEBUGGING START ---
+                            if self.verbose:
+                                self.log(ErrorLevel.INFO, f"  Skipped {current_index - initial_index_for_skip} tokens (Inline/Close). Next: {tokens[current_index].type}")
+                            # --- NEW VERBOSE DEBUGGING END ---
+                            break
+                    
         return current_index - token_index, None
     
     def validate_structure(self, filepath: Path, content: str, result: ValidationResult) -> bool:
