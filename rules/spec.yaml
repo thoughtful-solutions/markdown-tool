@@ -1,0 +1,36 @@
+# spec.yaml
+structure:
+  - min_occurrences: 1
+    max_occurrences: 1
+    error_level: FATAL
+    sequence:
+      - type: heading_open
+        level: 1
+        content_regex: '^R: \w+$'
+      - type: heading_open
+        level: 2
+        content_regex: '^Definition$'
+      - type: paragraph_open
+      - type: heading_open
+        level: 2
+        content_regex: '^Rationale$'
+      - type: paragraph_open
+      - type: heading_open
+        level: 2
+        content_regex: '^Implications$'
+      - type: paragraph_open
+      - type: heading_open
+        level: 2
+        content_regex: '^Scope$'
+      - type: heading_open
+        level: 3
+        content_regex: '^Organisational Scope$'
+      - type: paragraph_open
+      - type: heading_open
+        level: 3
+        content_regex: '^Technology Scope$'
+      - type: paragraph_open
+      - type: heading_open
+        level: 2
+        content_regex: '^Exception Process$'
+      - type: paragraph_open
