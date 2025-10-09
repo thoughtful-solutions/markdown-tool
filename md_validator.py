@@ -184,7 +184,6 @@ class MarkdownValidator:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # --- MODIFIED: Warning for missing links.yaml is now handled in verify_project ---
             self.load_links_spec(filepath.parent / 'links.yaml')
             self.validate_links(filepath, content, result)
         except Exception as e:
@@ -192,84 +191,102 @@ class MarkdownValidator:
             self.log(ErrorLevel.FATAL, f"{filepath.name}: {e}")
         return result
 
-    def verify_bidirectional_links(self, directory: Path) -> List[str]:
-        """Checks for reverse links for all outgoing links in the given directory's links.yaml."""
-        warnings = []
-        local_spec_path = directory / 'links.yaml'
-
-        if not self.load_links_spec(local_spec_path) or 'established_links' not in self.links_spec:
+    def verify_bidirectional_links(self, local_directory: Path, project_root: Path) -> List[str]:
+        """Performs a targeted scan for unidirectional links related to the given directory."""
+        warnings: Set[str] = set()
+        
+        local_spec_path = local_directory / 'links.yaml'
+        local_validator = MarkdownValidator()
+        if not local_validator.load_links_spec(local_spec_path):
             return []
 
-        for source_name, targets in self.links_spec['established_links'].items():
-            try:
-                source_abs = (directory / source_name).resolve(strict=True)
-                for target_link in targets:
-                    try:
-                        target_abs = (directory / os.path.normpath(target_link)).resolve(strict=True)
-                        target_spec_path = target_abs.parent / 'links.yaml'
-                        
-                        target_validator = MarkdownValidator()
-                        if not target_validator.load_links_spec(target_spec_path):
-                            warnings.append(f"Link {source_name} -> {target_link}: Cannot verify reverse link, {target_spec_path.relative_to(directory.parent)} is missing.")
-                            continue
-
-                        reverse_link_path = os.path.relpath(source_abs, start=target_abs.parent).replace(os.path.sep, '/')
-                        
-                        target_links = target_validator.links_spec.get('established_links', {}).get(target_abs.name, [])
-                        
-                        is_reversed = any(os.path.normpath(link).replace(os.path.sep, '/') == reverse_link_path for link in target_links)
-                        
-                        if not is_reversed:
-                            warnings.append(f"Unidirectional link found: {source_name} -> {target_link}")
-
-                    except FileNotFoundError:
-                        pass
-            except FileNotFoundError:
-                pass
-        return warnings
-
-    def verify_project(self, directory: Path, args: argparse.Namespace) -> int:
-        resolved_directory = directory.resolve()
+        local_links = local_validator.links_spec.get('established_links', {})
         
-        md_files = self.find_markdown_files(resolved_directory, recursive=False)
+        # Part 1: Check all outgoing links from the current directory
+        for source_name, targets in local_links.items():
+            for target_link in targets:
+                try:
+                    source_abs = (local_directory / source_name).resolve(strict=True)
+                    target_abs = (local_directory / os.path.normpath(target_link)).resolve(strict=True)
+                    
+                    remote_validator = MarkdownValidator()
+                    if not remote_validator.load_links_spec(target_abs.parent / 'links.yaml'):
+                        continue
+                    
+                    reverse_path = os.path.relpath(source_abs, start=target_abs.parent).replace(os.path.sep, '/')
+                    remote_target_links = remote_validator.links_spec.get('established_links', {}).get(target_abs.name, [])
+                    
+                    if not any(os.path.normpath(link).replace(os.path.sep, '/') == reverse_path for link in remote_target_links):
+                        warnings.add(f"Unidirectional link: {source_abs.relative_to(project_root)} -> {target_abs.relative_to(project_root)}")
+
+                except FileNotFoundError: continue
+
+        # Part 2: Check incoming links from directories mentioned in allowed_targets
+        remote_dirs_to_check: Set[Path] = set()
+        if 'allowed_targets' in local_validator.links_spec:
+            for rule in local_validator.links_spec['allowed_targets']:
+                try:
+                    remote_dir = (local_directory / rule['directory']).resolve(strict=True)
+                    remote_dirs_to_check.add(remote_dir)
+                except FileNotFoundError: continue
+        
+        for remote_dir in remote_dirs_to_check:
+            remote_validator = MarkdownValidator()
+            if not remote_validator.load_links_spec(remote_dir / 'links.yaml'):
+                continue
+                
+            for remote_source_name, remote_targets in remote_validator.links_spec.get('established_links', {}).items():
+                for remote_target_link in remote_targets:
+                    try:
+                        remote_target_abs = (remote_dir / os.path.normpath(remote_target_link)).resolve(strict=True)
+                        
+                        if remote_target_abs.parent == local_directory:
+                            remote_source_abs = (remote_dir / remote_source_name).resolve(strict=True)
+                            reverse_path = os.path.relpath(remote_source_abs, start=remote_target_abs.parent).replace(os.path.sep, '/')
+                            local_target_links = local_links.get(remote_target_abs.name, [])
+                            
+                            if not any(os.path.normpath(link).replace(os.path.sep, '/') == reverse_path for link in local_target_links):
+                                warnings.add(f"Unidirectional link: {remote_target_abs.relative_to(project_root)} <- {remote_source_abs.relative_to(project_root)}")
+                    except FileNotFoundError: continue
+
+        return sorted(list(warnings))
+
+    def verify_project(self, directory: Path, project_root: Path, args: argparse.Namespace) -> int:
+        # --- MODIFIED: Use resolved path for the local directory scan ---
+        resolved_local_dir = directory.resolve()
+        
+        md_files = self.find_markdown_files(resolved_local_dir, recursive=False)
         
         total_errors, total_warnings = 0, 0
         files_with_errors, files_with_warnings = 0, 0
 
-        # --- MODIFIED: Check for links.yaml once per directory ---
-        if md_files and not (resolved_directory / 'links.yaml').exists():
-            self.log(ErrorLevel.WARN, f"Directory '{resolved_directory.name}' contains Markdown files but is missing links.yaml.")
+        if md_files and not (resolved_local_dir / 'links.yaml').exists():
+            self.log(ErrorLevel.WARN, f"Directory '{resolved_local_dir.name}' contains Markdown files but is missing links.yaml.")
             total_warnings += 1
 
         if md_files:
             for filepath in md_files:
-                if self.verbose:
-                    self.log(ErrorLevel.INFO, f"Validating {filepath}...")
+                if self.verbose: self.log(ErrorLevel.INFO, f"Validating {filepath}...")
                 result = self.validate_file(filepath)
                 status = "[PASS]"
                 if result.has_errors:
-                    status = "[FAIL]"
-                    files_with_errors += 1
-                    total_errors += len(result.errors)
+                    status = "[FAIL]"; files_with_errors += 1; total_errors += len(result.errors)
                 if result.has_warnings:
-                    status = "[WARN]" if not result.has_errors else status
-                    files_with_warnings += 1
-                    total_warnings += len(result.warnings)
+                    status = "[WARN]" if not result.has_errors else status; files_with_warnings += 1; total_warnings += len(result.warnings)
                 
-                if self.quiet and status == "[PASS]" and not result.has_warnings:
-                    continue
+                if self.quiet and status == "[PASS]" and not result.has_warnings: continue
                 
-                self.log(ErrorLevel.INFO, f"{status} {filepath.relative_to(resolved_directory.parent)}: {len(result.errors)} errors, {len(result.warnings)} warnings")
+                # This comparison is now between a resolved filepath and a resolved project_root
+                self.log(ErrorLevel.INFO, f"{status} {filepath.relative_to(project_root)}: {len(result.errors)} errors, {len(result.warnings)} warnings")
         else:
-            self.log(ErrorLevel.INFO, f"No Markdown files found in {resolved_directory}")
+            self.log(ErrorLevel.INFO, f"No Markdown files found in {resolved_local_dir}")
 
-        if self.verbose:
-            self.log(ErrorLevel.INFO, "\nChecking for bidirectional link integrity in current directory...")
+        if self.verbose: self.log(ErrorLevel.INFO, "\nChecking for bidirectional link integrity...")
         
-        bidir_warnings = self.verify_bidirectional_links(resolved_directory)
+        bidir_warnings = self.verify_bidirectional_links(resolved_local_dir, project_root)
         if bidir_warnings:
             self.log(ErrorLevel.WARN, "\nBidirectional Link Warnings:")
-            for warning in sorted(bidir_warnings):
+            for warning in sorted(list(set(bidir_warnings))):
                 self.log(ErrorLevel.WARN, f" - {warning}")
             total_warnings += len(bidir_warnings)
 
@@ -283,151 +300,99 @@ class MarkdownValidator:
 
 def create_file(args):
     filepath = Path(args.filename)
-    if filepath.exists():
-        logger.error(f"[FATAL] File already exists: {filepath}")
-        return 2
+    if filepath.exists(): logger.error(f"[FATAL] File already exists: {filepath}"); return 2
     try:
         template = f"""# {filepath.stem.replace('_', ' ').title()}\n\n## Description\n\nThis is a new Markdown document.\n"""
         filepath.write_text(template, encoding='utf-8')
         logger.info(f"[INFO] Created file: {filepath}")
         return 0
-    except Exception as e:
-        logger.error(f"[FATAL] Failed to create file: {e}")
-        return 2
+    except Exception as e: logger.error(f"[FATAL] Failed to create file: {e}"); return 2
 
 def read_file(args):
     filepath = Path(args.filename)
-    if not filepath.exists():
-        logger.error(f"[FATAL] File not found: {filepath}")
-        return 2
+    if not filepath.exists(): logger.error(f"[FATAL] File not found: {filepath}"); return 2
     try:
         print(filepath.read_text(encoding='utf-8'))
         return 0
-    except Exception as e:
-        logger.error(f"[FATAL] Failed to read file: {e}")
-        return 2
+    except Exception as e: logger.error(f"[FATAL] Failed to read file: {e}"); return 2
 
 def delete_file(args):
     filepath = Path(args.filename)
-    if not filepath.exists():
-        logger.error(f"[FATAL] File not found: {filepath}")
-        return 2
+    if not filepath.exists(): logger.error(f"[FATAL] File not found: {filepath}"); return 2
     try:
         filepath.unlink()
         logger.info(f"[INFO] Deleted file: {filepath}")
         return 0
-    except Exception as e:
-        logger.error(f"[FATAL] Failed to delete file: {e}")
-        return 2
+    except Exception as e: logger.error(f"[FATAL] Failed to delete file: {e}"); return 2
 
 def link_files(args):
-    source_path = Path(args.source)
-    target_path = Path(args.target)
-    if not source_path.is_file():
-        logger.error(f"[FATAL] Source file not found: {source_path}")
-        return 2
-    if not target_path.exists():
-        logger.error(f"[FATAL] Target path does not exist: {target_path}")
-        return 2
+    source_path, target_path = Path(args.source), Path(args.target)
+    if not source_path.is_file(): logger.error(f"[FATAL] Source file not found: {source_path}"); return 2
+    if not target_path.exists(): logger.error(f"[FATAL] Target path does not exist: {target_path}"); return 2
 
     links_spec_path = source_path.parent / 'links.yaml'
     validator = MarkdownValidator()
     validator.load_links_spec(links_spec_path)
 
     if not validator.links_spec or 'allowed_targets' not in validator.links_spec:
-        logger.error(f"[FATAL] {links_spec_path} is missing 'allowed_targets' section or does not exist.")
-        return 2
+        logger.error(f"[FATAL] {links_spec_path} is missing 'allowed_targets' section or does not exist."); return 2
 
     link_is_valid = False
     for rule in validator.links_spec['allowed_targets']:
         try:
             target_dir_rule = (source_path.parent / rule['directory']).resolve()
-            filename_pattern = re.compile(rule['filename_regex'])
-            if target_path.resolve().parent == target_dir_rule and filename_pattern.match(target_path.name):
-                link_is_valid = True
-                break
-        except Exception:
-            continue
+            if target_path.resolve().parent == target_dir_rule and re.compile(rule['filename_regex']).match(target_path.name):
+                link_is_valid = True; break
+        except Exception: continue
     if not link_is_valid:
-        logger.error(f"[FATAL] Link from '{source_path.name}' to '{target_path.name}' is not allowed by the rules in {links_spec_path}.")
-        return 2
+        logger.error(f"[FATAL] Link from '{source_path.name}' to '{target_path.name}' is not allowed by the rules in {links_spec_path}."); return 2
 
     try:
         data = validator.links_spec
         relative_path = os.path.relpath(target_path, start=source_path.parent).replace(os.path.sep, '/')
-
         data.setdefault('established_links', {}).setdefault(source_path.name, [])
-        
         if relative_path not in data['established_links'][source_path.name]:
             data['established_links'][source_path.name].append(relative_path)
-            
             with open(links_spec_path, 'w', encoding='utf-8') as f:
                 yaml.dump(data, f, sort_keys=False, default_flow_style=False, indent=2)
-
             logger.info(f"[INFO] Link from '{source_path.name}' to '{target_path.name}' recorded in {links_spec_path.name}")
         else:
             logger.info(f"[INFO] Link already exists.")
-        
         return 0
-
-    except Exception as e:
-        logger.error(f"[FATAL] Failed to record link: {e}")
-        return 2
+    except Exception as e: logger.error(f"[FATAL] Failed to record link: {e}"); return 2
 
 def unlink_files(args):
     """Removes an established link from the source directory's links.yaml."""
     source_path_arg = Path(args.source)
-    if not source_path_arg.is_file():
-        logger.error(f"[FATAL] Source file not found: {source_path_arg}")
-        return 2
+    if not source_path_arg.is_file(): logger.error(f"[FATAL] Source file not found: {source_path_arg}"); return 2
     
-    source_path_abs = source_path_arg.resolve()
-    target_path_abs = (Path.cwd() / args.target).resolve(strict=False)
-    
+    source_path_abs, target_path_abs = source_path_arg.resolve(), (Path.cwd() / args.target).resolve(strict=False)
     links_spec_path = source_path_abs.parent / 'links.yaml'
-    if not links_spec_path.exists():
-        logger.error(f"[FATAL] Cannot remove link: {links_spec_path} does not exist.")
-        return 2
+    if not links_spec_path.exists(): logger.error(f"[FATAL] Cannot remove link: {links_spec_path} does not exist."); return 2
 
     try:
-        with open(links_spec_path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f) or {}
-
+        with open(links_spec_path, 'r', encoding='utf-8') as f: data = yaml.safe_load(f) or {}
         source_filename = source_path_abs.name
         if 'established_links' not in data or source_filename not in data['established_links']:
-            logger.info(f"[INFO] No established links found for '{source_filename}' to remove.")
-            return 0
+            logger.info(f"[INFO] No established links found for '{source_filename}' to remove."); return 0
         
         path_to_find = os.path.normpath(os.path.relpath(target_path_abs, start=source_path_abs.parent)).replace(os.path.sep, '/')
-        
         link_to_remove = None
         for link in data['established_links'][source_filename]:
-            normalized_existing_link = os.path.normpath(link).replace(os.path.sep, '/')
-            if normalized_existing_link == path_to_find:
-                link_to_remove = link
-                break
+            if os.path.normpath(link).replace(os.path.sep, '/') == path_to_find:
+                link_to_remove = link; break
         
         if link_to_remove:
             data['established_links'][source_filename].remove(link_to_remove)
-            
-            if not data['established_links'][source_filename]:
-                del data['established_links'][source_filename]
-            
-            if not data['established_links']:
-                del data['established_links']
-            
+            if not data['established_links'][source_filename]: del data['established_links'][source_filename]
+            if not data['established_links']: del data['established_links']
             with open(links_spec_path, 'w', encoding='utf-8') as f:
                 yaml.dump(data, f, sort_keys=False, default_flow_style=False, indent=2)
-            
             logger.info(f"[INFO] Link from '{source_filename}' to '{Path(args.target).name}' removed.")
         else:
             logger.info(f"[INFO] Link from '{source_filename}' to '{Path(args.target).name}' not found.")
-            
         return 0
-
-    except Exception as e:
-        logger.error(f"[FATAL] Failed to remove link: {e}")
-        return 2
+    except Exception as e: logger.error(f"[FATAL] Failed to remove link: {e}"); return 2
 
 def update_bidirectional_links(args):
     """Scans all links.yaml files and adds missing reverse links and rules."""
@@ -442,9 +407,7 @@ def update_bidirectional_links(args):
             all_specs[spec_path.resolve()] = yaml.safe_load(f) or {}
 
     for source_spec_path, source_data in all_specs.items():
-        if 'established_links' not in source_data:
-            continue
-        
+        if 'established_links' not in source_data: continue
         source_dir = source_spec_path.parent
         for source_name, targets in source_data['established_links'].items():
             try:
@@ -453,24 +416,17 @@ def update_bidirectional_links(args):
                     try:
                         target_abs = (source_dir / os.path.normpath(target_link)).resolve(strict=True)
                         target_spec_path = (target_abs.parent / 'links.yaml').resolve()
-                        
                         if target_spec_path not in all_specs:
-                            validator.log(ErrorLevel.WARN, f"Cannot create reverse link for '{target_abs.relative_to(project_root)}': links.yaml missing.")
-                            continue
-
+                            validator.log(ErrorLevel.WARN, f"Cannot create reverse link for '{target_abs.relative_to(project_root)}': links.yaml missing."); continue
+                        
                         reverse_link_path = os.path.relpath(source_abs, start=target_abs.parent).replace(os.path.sep, '/')
-                        
                         target_spec_data = all_specs[target_spec_path]
-                        
                         is_allowed = False
                         allowed_targets = target_spec_data.setdefault('allowed_targets', [])
-                        
                         for rule in allowed_targets:
                             try:
-                                rule_dir = (target_abs.parent / rule['directory']).resolve()
-                                if source_abs.parent == rule_dir:
-                                    is_allowed = True
-                                    break
+                                if source_abs.parent == (target_abs.parent / rule['directory']).resolve():
+                                    is_allowed = True; break
                             except: continue
                         
                         if not is_allowed:
@@ -481,17 +437,13 @@ def update_bidirectional_links(args):
                             updated_files.add(target_spec_path)
 
                         target_links = target_spec_data.setdefault('established_links', {}).setdefault(target_abs.name, [])
-                        
                         if not any(os.path.normpath(link).replace(os.path.sep, '/') == reverse_link_path for link in target_links):
                             target_links.append(reverse_link_path)
                             validator.log(ErrorLevel.INFO, f"Added reverse link to {target_abs.relative_to(project_root)}")
                             updated_files.add(target_spec_path)
-
                     except FileNotFoundError:
-                        validator.log(ErrorLevel.WARN, f"Could not resolve link target '{target_link}' from '{source_name}'. Skipping.")
-                        continue
-            except FileNotFoundError:
-                continue
+                        validator.log(ErrorLevel.WARN, f"Could not resolve link target '{target_link}' from '{source_name}'. Skipping."); continue
+            except FileNotFoundError: continue
     
     if updated_files:
         for spec_path in updated_files:
@@ -500,13 +452,11 @@ def update_bidirectional_links(args):
         logger.info(f"\nSuccessfully updated {len(updated_files)} links.yaml file(s).")
     else:
         logger.info("\nAll links are already bidirectional. No files were changed.")
-        
     return 0
 
 def display_links(args):
     validator = MarkdownValidator()
     project_root = Path(sys.argv[0]).parent.resolve()
-    
     logger.info("Scanning project for links...")
     link_map = {}
 
@@ -514,8 +464,7 @@ def display_links(args):
         if validator.load_links_spec(spec_file) and 'established_links' in validator.links_spec:
             for source_name, targets in validator.links_spec['established_links'].items():
                 source_file = spec_file.parent / source_name
-                if source_file not in link_map:
-                    link_map[source_file] = []
+                if source_file not in link_map: link_map[source_file] = []
                 for target_link in targets:
                     target_file = (source_file.parent / os.path.normpath(target_link)).resolve()
                     link_map[source_file].append({'target': target_file, 'type': 'Established'})
@@ -526,40 +475,32 @@ def display_links(args):
             content = source_file.read_text(encoding='utf-8')
             relative_links = validator.extract_links(content)
             if relative_links:
-                if source_file not in link_map:
-                    link_map[source_file] = []
+                if source_file not in link_map: link_map[source_file] = []
                 for link in relative_links:
                     target_file = (source_file.parent / os.path.normpath(link)).resolve()
                     link_map[source_file].append({'target': target_file, 'type': 'Physical'})
-        except Exception as e:
-            logger.error(f"Could not process {source_file}: {e}")
+        except Exception as e: logger.error(f"Could not process {source_file}: {e}")
 
     links_found = sum(len(links) for links in link_map.values())
-    
-    if links_found == 0:
-        logger.info("\nNo relative links found in any files.")
-        return 0
+    if links_found == 0: logger.info("\nNo relative links found in any files."); return 0
 
     for source_file, links in sorted(link_map.items()):
         print(f"\nFILE: {source_file.relative_to(project_root)}")
         for link_info in links:
-            target_file = link_info['target']
-            link_type = link_info['type']
+            target_file, link_type = link_info['target'], link_info['type']
             status_indicator = "[OK]" if target_file.exists() else "[BROKEN]"
-            
             try:
                 display_path = target_file.relative_to(project_root)
             except ValueError:
                 display_path = target_file
-
             print(f"  --> {status_indicator} {display_path}  ({link_type})")
-            
     return 0
 
 def verify_project(args):
     """Wrapper function to set up and run the project verification."""
     validator = MarkdownValidator(verbose=args.verbose, quiet=args.quiet)
-    return validator.verify_project(Path.cwd(), args)
+    project_root = Path(sys.argv[0]).parent.resolve()
+    return validator.verify_project(Path.cwd(), project_root, args)
 
 
 def main():
@@ -585,57 +526,37 @@ def main():
     delete_parser.add_argument('filename', help='Name of the file to delete.')
     delete_parser.set_defaults(func=delete_file)
     
-    link_parser = subparsers.add_parser(
-        'link', 
-        help="Record a logical link in a links.yaml file.",
-        description="Records a logical link between two files in the source directory's links.yaml.",
-        epilog=textwrap.dedent('''
+    link_parser = subparsers.add_parser('link', help="Record a logical link in a links.yaml file.", epilog=textwrap.dedent('''
             example:
               python md_validator.py link domains/business-arch.md principles/agility.md
-        '''),
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+        '''), formatter_class=argparse.RawTextHelpFormatter)
     link_parser.add_argument('source', help='The source Markdown file')
     link_parser.add_argument('target', help='The target file or directory')
     link_parser.set_defaults(func=link_files)
 
-    unlink_parser = subparsers.add_parser(
-        'unlink',
-        help="Remove an established link from a links.yaml file.",
-        description="Removes an established link from the source directory's links.yaml.",
-        epilog=textwrap.dedent('''
+    unlink_parser = subparsers.add_parser('unlink', help="Remove an established link from a links.yaml file.", epilog=textwrap.dedent('''
             example:
               python md_validator.py unlink domains/business-arch.md principles/agility.md
-        '''),
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+        '''), formatter_class=argparse.RawTextHelpFormatter)
     unlink_parser.add_argument('source', help='The source file of the link')
     unlink_parser.add_argument('target', help='The target file of the link to remove')
     unlink_parser.set_defaults(func=unlink_files)
 
-    verify_parser = subparsers.add_parser(
-        'verify', 
-        help='Validate all Markdown files in the local directory.',
-        description='Validates files in the current directory against local and remote link rules.',
-        epilog=textwrap.dedent('''
+    verify_parser = subparsers.add_parser('verify', help='Validate all Markdown files in the local directory.', epilog=textwrap.dedent('''
             Checks for:
              - Missing links.yaml in the current directory
              - Broken links originating from this directory
-             - Unidirectional links originating from this directory
-        '''),
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+             - Unidirectional links involving this directory
+        '''), formatter_class=argparse.RawTextHelpFormatter)
     verify_parser.set_defaults(func=verify_project)
     
     display_parser = subparsers.add_parser('display-links', help='Display a map of all links across the project.')
     display_parser.set_defaults(func=display_links)
 
-    update_links_parser = subparsers.add_parser(
-        'update-links',
-        help='Scans the whole project and creates missing reverse links.',
-        description='Scans all established links and creates the corresponding reverse links\nto ensure bidirectionality, automatically adding link rules where needed.',
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+    update_links_parser = subparsers.add_parser('update-links', help='Scans the whole project and creates missing reverse links.', epilog=textwrap.dedent('''
+        Scans all established links and creates the corresponding reverse links
+        to ensure bidirectionality, automatically adding link rules where needed.
+        '''), formatter_class=argparse.RawTextHelpFormatter)
     update_links_parser.set_defaults(func=update_bidirectional_links)
 
 
