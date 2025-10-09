@@ -1,0 +1,15 @@
+allowed_targets:
+- directory: ../principles
+  filename_regex: .*\.md$
+established_links:
+  business-architecture.md:
+  - ..\principles\sustainability.md
+  - ..\principles\resiliency.md
+  - ..\principles\agility.md
+  - ..\principles\business-alignment.md
+  technology-architecture.md:
+  - ..\principles\supportability.md
+  - ..\principles\resiliency.md
+  - ..\principles\interoperability.md
+  - ..\principles\agility.md
+  - ..\principles\business-alignment.md

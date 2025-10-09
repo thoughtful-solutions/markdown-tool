@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python3
 """
 Markdown Validator CLI Tool
@@ -9,6 +10,7 @@ import argparse
 import sys
 import re
 import yaml
+import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
@@ -95,7 +97,6 @@ class MarkdownValidator:
                 self.log(ErrorLevel.WARN, "spec.yaml missing 'structure' key")
                 return False
 
-            # Set defaults for each block
             for block in self.spec['structure']:
                 block.setdefault('min_occurrences', 1)
                 block.setdefault('max_occurrences', None)
@@ -120,11 +121,15 @@ class MarkdownValidator:
             if not links_path.exists():
                 if self.verbose:
                     self.log(ErrorLevel.INFO, f"No links.yaml found at {links_path}")
+                self.links_spec = None
                 return False
 
             with open(links_path, 'r', encoding='utf-8') as f:
                 self.links_spec = yaml.safe_load(f)
 
+            if self.links_spec is None:
+                self.links_spec = {}
+            
             return True
 
         except yaml.YAMLError as e:
@@ -139,16 +144,13 @@ class MarkdownValidator:
         md_files = []
 
         for path in directory.rglob('*.md'):
-            # Skip hidden directories
             if any(part.startswith('.') for part in path.parts):
                 continue
             md_files.append(path)
 
         return sorted(md_files)
 
-    # --- NEW: Helper function to describe a spec rule for better error messages ---
     def _describe_step(self, step: Dict[str, Any]) -> str:
-        """Creates a human-readable description of a validation step."""
         description = step['type']
         if step['type'] == 'heading_open' and 'level' in step:
             description = f"heading (H{step['level']})"
@@ -164,37 +166,24 @@ class MarkdownValidator:
 
     def validate_sequence_step(self, tokens: List[Token], token_index: int,
                               step: Dict[str, Any]) -> Tuple[bool, int, str]:
-        """
-        Validate a single sequence step against tokens.
-        Returns: (success, tokens_consumed, error_message)
-        """
         if token_index >= len(tokens):
-            # --- UPDATED: More descriptive error ---
             return False, 0, f"Expected {self._describe_step(step)}, but reached the end of the file."
 
         token = tokens[token_index]
-        # --- NEW: Get line number for error reporting ---
         line_num = token.map[0] + 1 if token.map else 'N/A'
 
-        # Check token type
         if token.type != step['type']:
-            # --- UPDATED: More descriptive error ---
             return False, 0, f"line {line_num}: Expected {self._describe_step(step)}, but found a '{token.type}' instead."
 
-        # Check level for headings
         if 'level' in step and token.type == 'heading_open':
             expected_tag = f"h{step['level']}"
             if token.tag != expected_tag:
-                 # --- UPDATED: More descriptive error ---
                 return False, 0, f"line {line_num}: Expected heading level {step['level']} ({expected_tag}), but found level {token.tag[1:]} ({token.tag})."
 
-        # Check info for fenced code blocks
         if 'info' in step and token.type == 'fence':
             if token.info != step['info']:
-                # --- UPDATED: More descriptive error ---
                 return False, 0, f"line {line_num}: Expected code block language '{step['info']}', but found '{token.info}'."
 
-        # Check content regex
         if 'content_regex' in step:
             content_to_check = ""
             if token.type in ['heading_open', 'paragraph_open']:
@@ -205,52 +194,28 @@ class MarkdownValidator:
 
             pattern = re.compile(step['content_regex'])
             if not pattern.search(content_to_check):
-                # --- UPDATED: More descriptive error ---
                 return False, 0, f"line {line_num}: Content '{content_to_check}' does not match the expected pattern: {step['content_regex']}"
 
         return True, 1, ""
 
     def validate_block(self, tokens: List[Token], token_index: int,
                       block: Dict[str, Any]) -> Tuple[int, Optional[str]]:
-        """
-        Validate a block against tokens.
-        Returns: (tokens_consumed, error_message)
-        """
         sequence = block['sequence']
         current_index = token_index
 
-        if self.verbose:
-            block_num = self.spec['structure'].index(block) + 1
-            self.log(ErrorLevel.INFO, f"--- DEBUG: Starting Block {block_num} ---")
-            self.log(ErrorLevel.INFO, f"Initial Token Index: {token_index}, Total Tokens: {len(tokens)}")
-
         for step_idx, step in enumerate(sequence):
-            if self.verbose:
-                token_type = tokens[current_index].type if current_index < len(tokens) else 'EOF'
-                self.log(ErrorLevel.INFO, f"  Step {step_idx + 1}: Expected Type: {step.get('type', 'N/A')}, Found Index {current_index} Token Type: {token_type}")
-                if 'content_regex' in step:
-                     self.log(ErrorLevel.INFO, f"  Step {step_idx + 1}: Expected Content Regex: {step['content_regex']}")
-
             success, consumed, error = self.validate_sequence_step(tokens, current_index, step)
 
             if not success:
-                if self.verbose:
-                    token_info = tokens[current_index].as_dict() if current_index < len(tokens) else 'EOF'
-                    self.log(ErrorLevel.INFO, f"  Step {step_idx + 1} FAILED. Error: {error}. Token details: {token_info}")
-                # --- UPDATED: Add more context to the returned error ---
                 block_description = self._describe_step(sequence[0])
                 return 0, f"In block starting with '{block_description}', step {step_idx + 1} failed: {error}"
 
             current_index += consumed
 
-            if self.verbose:
-                self.log(ErrorLevel.INFO, f"  Step {step_idx + 1} MATCHED (Consumed: {consumed}). New Index: {current_index}")
-
             if tokens[current_index - 1].type in ['heading_open', 'paragraph_open', 'list_item_open']:
                 started_with_list_item = any(s['type'] == 'list_item_open' for s in sequence)
                 if started_with_list_item and step_idx + 1 == len(sequence):
                     list_item_depth = 1
-                    initial_index_for_skip = current_index
                     while current_index < len(tokens):
                         token = tokens[current_index]
                         if token.type == 'list_item_open':
@@ -259,30 +224,23 @@ class MarkdownValidator:
                             list_item_depth -= 1
                             if list_item_depth == 0:
                                 current_index += 1
-                                if self.verbose:
-                                    self.log(ErrorLevel.INFO, f"  Skipped {current_index - initial_index_for_skip} tokens until list_item_close.")
                                 break
                         current_index += 1
                 elif not started_with_list_item or step_idx + 1 == len(sequence):
-                    initial_index_for_skip = current_index
                     while current_index < len(tokens):
                         if tokens[current_index].type in ['inline', 'heading_close', 'paragraph_close']:
                             current_index += 1
                         else:
-                            if self.verbose:
-                                self.log(ErrorLevel.INFO, f"  Skipped {current_index - initial_index_for_skip} tokens (Inline/Close). Next: {tokens[current_index].type}")
                             break
 
         return current_index - token_index, None
 
     def validate_structure(self, filepath: Path, content: str, result: ValidationResult) -> bool:
-        """Validate document structure against spec.yaml."""
         if not self.spec:
             return True
 
         tokens = self.md_parser.parse(content)
         token_index = 0
-        block_idx_for_error = 0 # --- NEW: Track which block we are on for error reporting
 
         for block_idx, block in enumerate(self.spec['structure']):
             min_occur = block['min_occurrences']
@@ -290,8 +248,6 @@ class MarkdownValidator:
             error_level = ErrorLevel(block.get('error_level', 'FATAL').upper())
 
             matches = 0
-            block_idx_for_error = block_idx + 1
-
             while token_index < len(tokens):
                 consumed, error = self.validate_block(tokens, token_index, block)
 
@@ -301,10 +257,8 @@ class MarkdownValidator:
                     if max_occur is not None and matches >= max_occur:
                         break
                 else:
-                    # --- NEW: If a block fails to match, we might have a fatal error ---
-                    # Only report this as a fatal error if we haven't met the minimum occurrences yet
                     if matches < min_occur:
-                        message = f"{filepath.name}: {error}" # Error from validate_block is now detailed
+                        message = f"{filepath.name}: {error}"
                         if error_level == ErrorLevel.FATAL:
                             result.errors.append(message)
                             self.log(ErrorLevel.FATAL, message)
@@ -312,11 +266,9 @@ class MarkdownValidator:
                         else:
                             result.warnings.append(message)
                             self.log(ErrorLevel.WARN, message)
-                    break # Stop trying to match this block
+                    break
 
-            # Check occurrence constraints after trying all matches
             if matches < min_occur:
-                # --- UPDATED: More descriptive occurrence error ---
                 block_description = self._describe_step(block['sequence'][0])
                 message = f"{filepath.name}: Expected the block starting with '{block_description}' to appear at least {min_occur} time(s), but it appeared {matches} time(s)."
 
@@ -327,233 +279,280 @@ class MarkdownValidator:
                 elif error_level == ErrorLevel.WARN and message not in result.warnings:
                     result.warnings.append(message)
                     self.log(ErrorLevel.WARN, message)
-
         return True
 
-
     def extract_links(self, content: str) -> List[str]:
-        """Extract all relative links from Markdown content."""
         link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
         matches = re.findall(link_pattern, content)
-
         relative_links = []
         for _, url in matches:
             if not url.startswith(('http://', 'https://', 'mailto:', '#')):
                 relative_links.append(url)
-
         return relative_links
 
     def validate_links(self, filepath: Path, content: str, result: ValidationResult) -> bool:
-        """Validate hyperlinks against links.yaml."""
         if not self.links_spec:
             return True
 
-        links = self.extract_links(content)
+        physical_links = self.extract_links(content)
+        
+        established_links = []
+        if 'established_links' in self.links_spec:
+            established_links = self.links_spec['established_links'].get(filepath.name, [])
+        
+        all_links = physical_links + established_links
 
         if 'allowed_targets' in self.links_spec:
-            for link in links:
+            for link in all_links:
                 link_path = filepath.parent / link
                 link_valid = False
-
                 for target in self.links_spec['allowed_targets']:
                     target_dir = filepath.parent / target['directory']
                     filename_pattern = re.compile(target['filename_regex'])
-
                     try:
-                        if link_path.resolve().parent == target_dir.resolve():
-                            if filename_pattern.match(link_path.name):
-                                link_valid = True
-                                break
+                        if link_path.resolve().parent == target_dir.resolve() and filename_pattern.match(link_path.name):
+                            link_valid = True
+                            break
                     except:
                         pass
-
                 if not link_valid:
                     message = f"{filepath.name}: Invalid link target '{link}'"
                     result.warnings.append(message)
                     self.log(ErrorLevel.WARN, message)
 
         if 'required_links' in self.links_spec:
-            if str(filepath) in self.links_spec['required_links']:
-                required = self.links_spec['required_links'][str(filepath)]
-                for req_link in required:
-                    if req_link not in links:
+            required_spec = self.links_spec['required_links']
+            required_for_this_file = required_spec.get(str(filepath), required_spec.get(filepath.name))
+
+            if required_for_this_file:
+                for req_link in required_for_this_file:
+                    if req_link not in all_links:
                         message = f"{filepath.name}: Missing required link to '{req_link}'"
                         result.warnings.append(message)
                         self.log(ErrorLevel.WARN, message)
-
         return True
 
     def validate_file(self, filepath: Path) -> ValidationResult:
-        """Validate a single Markdown file."""
         result = ValidationResult(filename=str(filepath))
-
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
-
+            
+            self.load_links_spec(filepath.parent / 'links.yaml')
             if not self.validate_structure(filepath, content, result):
                 return result
-
             self.validate_links(filepath, content, result)
-
         except Exception as e:
             result.errors.append(f"Failed to process file: {e}")
             self.log(ErrorLevel.FATAL, f"{filepath.name}: {e}")
-
         return result
 
     def verify_project(self, directory: Path, dry_run: bool = False) -> int:
-        """
-        Verify all Markdown files in the project.
-        Returns exit code: 0=success, 1=warnings, 2=errors
-        """
         self.load_spec(directory / 'spec.yaml')
-        self.load_links_spec(directory / 'links.yaml')
-
+        
         md_files = self.find_markdown_files(directory)
-
         if not md_files:
             self.log(ErrorLevel.INFO, "No Markdown files found")
             return 0
 
-        total_errors = 0
-        total_warnings = 0
-        files_with_errors = 0
-        files_with_warnings = 0
+        total_errors, total_warnings = 0, 0
+        files_with_errors, files_with_warnings = 0, 0
 
         for filepath in md_files:
             if self.verbose:
                 self.log(ErrorLevel.INFO, f"Validating {filepath}...")
-
             result = self.validate_file(filepath)
-
-            if result.has_errors or result.has_warnings:
-                status = "?" if result.has_errors else "??"
-            else:
-                status = "?"
-
-            self.log(ErrorLevel.INFO,
-                    f"{status} {filepath.name}: {len(result.errors)} errors, {len(result.warnings)} warnings")
-
+            status = "[PASS]"
             if result.has_errors:
+                status = "[FAIL]"
                 files_with_errors += 1
                 total_errors += len(result.errors)
             if result.has_warnings:
+                status = "[WARN]" if not result.has_errors else status
                 files_with_warnings += 1
                 total_warnings += len(result.warnings)
+            self.log(ErrorLevel.INFO, f"{status} {filepath.name}: {len(result.errors)} errors, {len(result.warnings)} warnings")
 
         self.log(ErrorLevel.INFO,
                 f"\nSummary: {len(md_files)} files validated, "
                 f"{files_with_errors} with fatal errors, "
                 f"{files_with_warnings} with warnings")
 
-        if total_errors > 0:
-            return 2
-        elif total_warnings > 0:
-            return 1
+        if total_errors > 0: return 2
+        elif total_warnings > 0: return 1
         return 0
 
 
 def create_file(args):
-    """Create a new Markdown file."""
     filepath = Path(args.filename)
-
     if filepath.exists():
         logger.error(f"[FATAL] File already exists: {filepath}")
         return 2
-
     try:
-        template = f"""# {filepath.stem.replace('_', ' ').title()}
-
-## Description
-
-This is a new Markdown document.
-
-## Content
-
-Add your content here.
-"""
+        template = f"""# {filepath.stem.replace('_', ' ').title()}\n\n## Description\n\nThis is a new Markdown document.\n\n## Content\n\nAdd your content here.\n"""
         filepath.write_text(template, encoding='utf-8')
         logger.info(f"[INFO] Created file: {filepath}")
         return 0
-
     except Exception as e:
         logger.error(f"[FATAL] Failed to create file: {e}")
         return 2
 
-
 def read_file(args):
-    """Read and display file contents."""
     filepath = Path(args.filename)
-
     if not filepath.exists():
         logger.error(f"[FATAL] File not found: {filepath}")
         return 2
-
     try:
-        content = filepath.read_text(encoding='utf-8')
-        print(content)
+        print(filepath.read_text(encoding='utf-8'))
         return 0
-
     except Exception as e:
         logger.error(f"[FATAL] Failed to read file: {e}")
         return 2
 
-
 def update_file(args):
-    """Update a section in a Markdown file (placeholder implementation)."""
     filepath = Path(args.filename)
-
     if not filepath.exists():
         logger.error(f"[FATAL] File not found: {filepath}")
         return 2
-
-    logger.info(f"[INFO] Update command logged for {filepath}")
-    logger.info(f"[INFO] Section: {args.section_name}")
-    logger.info(f"[INFO] Content: {args.content[:50]}..." if len(args.content) > 50 else f"[INFO] Content: {args.content}")
-
+    logger.info(f"[INFO] Update command logged for {filepath}, Section: {args.section_name}")
     return 0
 
-
 def delete_file(args):
-    """Delete a Markdown file."""
     filepath = Path(args.filename)
-
     if not filepath.exists():
         logger.error(f"[FATAL] File not found: {filepath}")
         return 2
-
     try:
         filepath.unlink()
         logger.info(f"[INFO] Deleted file: {filepath}")
         return 0
-
     except Exception as e:
         logger.error(f"[FATAL] Failed to delete file: {e}")
         return 2
 
+def link_files(args):
+    source_path = Path(args.source)
+    target_path = Path(args.target)
+    if not source_path.is_file():
+        logger.error(f"[FATAL] Source file not found: {source_path}")
+        return 2
+    if not target_path.exists():
+        logger.error(f"[FATAL] Target path does not exist: {target_path}")
+        return 2
+
+    links_spec_path = source_path.parent / 'links.yaml'
+    validator = MarkdownValidator()
+    validator.load_links_spec(links_spec_path)
+
+    if not validator.links_spec or 'allowed_targets' not in validator.links_spec:
+        logger.error(f"[FATAL] {links_spec_path} is missing 'allowed_targets' section or does not exist.")
+        return 2
+
+    link_is_valid = False
+    for rule in validator.links_spec['allowed_targets']:
+        try:
+            target_dir_rule = (source_path.parent / rule['directory']).resolve()
+            filename_pattern = re.compile(rule['filename_regex'])
+            if target_path.resolve().parent == target_dir_rule and filename_pattern.match(target_path.name):
+                link_is_valid = True
+                break
+        except Exception:
+            continue
+    if not link_is_valid:
+        logger.error(f"[FATAL] Link from '{source_path.name}' to '{target_path.name}' is not allowed by the rules in {links_spec_path}.")
+        return 2
+
+    try:
+        data = validator.links_spec
+        relative_path = os.path.relpath(target_path, start=source_path.parent)
+
+        if 'established_links' not in data:
+            data['established_links'] = {}
+        
+        if source_path.name not in data['established_links']:
+            data['established_links'][source_path.name] = []
+        
+        if relative_path not in data['established_links'][source_path.name]:
+            data['established_links'][source_path.name].append(relative_path)
+            
+            with open(links_spec_path, 'w', encoding='utf-8') as f:
+                yaml.dump(data, f, sort_keys=False, default_flow_style=False, indent=2)
+
+            logger.info(f"[INFO] Link from '{source_path.name}' to '{target_path.name}' recorded in {links_spec_path.name}")
+        else:
+            logger.info(f"[INFO] Link already exists.")
+        
+        return 0
+
+    except Exception as e:
+        logger.error(f"[FATAL] Failed to record link: {e}")
+        return 2
+
+def display_links(args):
+    validator = MarkdownValidator()
+    cwd = Path.cwd()
+    
+    logger.info("Scanning project for links...")
+    link_map = {}
+
+    for spec_file in cwd.rglob('links.yaml'):
+        if validator.load_links_spec(spec_file) and 'established_links' in validator.links_spec:
+            for source_name, targets in validator.links_spec['established_links'].items():
+                source_file = spec_file.parent / source_name
+                if source_file not in link_map:
+                    link_map[source_file] = []
+                for target_link in targets:
+                    target_file = (source_file.parent / target_link).resolve()
+                    link_map[source_file].append({'target': target_file, 'type': 'Established'})
+
+    md_files = validator.find_markdown_files(cwd)
+    for source_file in md_files:
+        try:
+            content = source_file.read_text(encoding='utf-8')
+            relative_links = validator.extract_links(content)
+            if relative_links:
+                if source_file not in link_map:
+                    link_map[source_file] = []
+                for link in relative_links:
+                    target_file = (source_file.parent / link).resolve()
+                    link_map[source_file].append({'target': target_file, 'type': 'Physical'})
+        except Exception as e:
+            logger.error(f"Could not process {source_file}: {e}")
+
+    links_found = sum(len(links) for links in link_map.values())
+    
+    if links_found == 0:
+        logger.info("\nNo relative links found in any files.")
+        return 0
+
+    for source_file, links in sorted(link_map.items()):
+        print(f"\nFILE: {source_file.relative_to(cwd)}")
+        for link_info in links:
+            target_file = link_info['target']
+            link_type = link_info['type']
+            status_indicator = "[OK]" if target_file.exists() else "[BROKEN]"
+            
+            try:
+                display_path = target_file.relative_to(cwd)
+            except ValueError:
+                display_path = target_file
+
+            print(f"  --> {status_indicator} {display_path}  ({link_type})")
+            
+    return 0
 
 def verify_project(args):
-    """Run validation on the project."""
     validator = MarkdownValidator(verbose=args.verbose, quiet=args.quiet)
     return validator.verify_project(Path.cwd(), dry_run=args.dry_run)
 
 
 def main():
-    """Main entry point for the CLI."""
-    parser = argparse.ArgumentParser(
-        prog='md_validator',
-        description='Markdown Validator CLI - A tool for Markdown document validation and management'
-    )
+    parser = argparse.ArgumentParser(prog='md_validator', description='Markdown Validator CLI - A tool for Markdown document validation and management')
+    parser.add_argument('--verbose', action='store_true', help='Enable detailed output for debugging')
+    parser.add_argument('--quiet', action='store_true', help='Suppress non-error messages')
+    parser.add_argument('--dry-run', action='store_true', help='Perform validation without making any file changes')
 
-    parser.add_argument('--verbose', action='store_true',
-                       help='Enable detailed output for debugging')
-    parser.add_argument('--quiet', action='store_true',
-                       help='Suppress non-error messages')
-    parser.add_argument('--dry-run', action='store_true',
-                       help='Perform validation without making any file changes')
-
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    subparsers = parser.add_subparsers(dest='command', help='Available commands', required=True)
 
     create_parser = subparsers.add_parser('create', help='Create a new Markdown file')
     create_parser.add_argument('filename', help='Name of the file to create')
@@ -563,8 +562,7 @@ def main():
     read_parser.add_argument('filename', help='Name of the file to read')
     read_parser.set_defaults(func=read_file)
 
-    update_parser = subparsers.add_parser('update',
-                                         help='Update a section in a file (placeholder)')
+    update_parser = subparsers.add_parser('update', help='Update a section in a file (placeholder)')
     update_parser.add_argument('filename', help='Name of the file to update')
     update_parser.add_argument('section_name', help='Name of the section to update')
     update_parser.add_argument('content', help='New content for the section')
@@ -573,20 +571,24 @@ def main():
     delete_parser = subparsers.add_parser('delete', help='Delete a file')
     delete_parser.add_argument('filename', help='Name of the file to delete')
     delete_parser.set_defaults(func=delete_file)
+    
+    link_parser = subparsers.add_parser('link', help="Record a link in the source directory's links.yaml")
+    link_parser.add_argument('source', help='The source Markdown file')
+    link_parser.add_argument('target', help='The target file or directory to link to')
+    link_parser.set_defaults(func=link_files)
 
-    verify_parser = subparsers.add_parser('verify',
-                                         help='Validate all Markdown files in the project')
+    verify_parser = subparsers.add_parser('verify', help='Validate all Markdown files in the project')
     verify_parser.set_defaults(func=verify_project)
+    
+    display_parser = subparsers.add_parser('display-links', help='Display a map of all physical and established links')
+    display_parser.set_defaults(func=display_links)
 
     args = parser.parse_args()
-
     if hasattr(args, 'func'):
-        exit_code = args.func(args)
-        sys.exit(exit_code)
+        sys.exit(args.func(args))
     else:
         parser.print_help()
         sys.exit(0)
-
 
 if __name__ == '__main__':
     main()
