@@ -8,7 +8,7 @@ structure:
     sequence:
       - type: heading_open
         level: 1
-        content_regex: '^D:\s+\w+'
+        content_regex: '^D:\s+.+'
 
   # Block 2: Definition section (required)
   - min_occurrences: 1
