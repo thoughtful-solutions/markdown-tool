@@ -481,7 +481,8 @@ def main():
     delete_parser.add_argument('filename', help='Name of the file to delete')
     delete_parser.set_defaults(func=delete_file)
 
-    verify_parser = subparsers.add_parser('verify', help='Validate all Markdown files in the project')
+    # Renamed 'verify' to 'verify-doc'
+    verify_parser = subparsers.add_parser('verify-doc', help='Validate all Markdown documents in the project')
     verify_parser.add_argument('directory', nargs='?', default='.', help='The directory to validate (defaults to current directory)')
     verify_parser.set_defaults(func=verify_project)
 
