@@ -6,14 +6,16 @@ Supports structure validation via spec.yaml and hyperlink validation via links.y
 """
 
 import argparse
+from collections import defaultdict
 import sys
 import re
 import yaml
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Set
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, Flag
 import logging
+import os
 
 try:
     from markdown_it import MarkdownIt
@@ -317,7 +319,6 @@ class MarkdownValidator:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Parse content into tokens once to be reused by validators
             tokens = self.md_parser.parse(content)
 
             if not self.validate_structure(filepath, tokens, result):
@@ -330,7 +331,7 @@ class MarkdownValidator:
             self.log(ErrorLevel.FATAL, f"{filepath.name}: {e}")
         return result
 
-    def verify_project(self, directory: Path, dry_run: bool = False) -> int:
+    def verify_project(self, directory: Path) -> int:
         """
         Verify all Markdown files in the project.
         Returns exit code: 0=success, 1=warnings, 2=errors
@@ -373,6 +374,246 @@ class MarkdownValidator:
             return 1
         return 0
 
+# --- LinkValidator for the verify-link command ---
+
+class LinkExitCode(Flag):
+    OK = 0
+    ERRORS = 1
+    SYSTEM_ERROR = 16
+
+@dataclass
+class LinkValidationDetail:
+    source_file: str
+    target_link: str
+    results: Dict[str, Tuple[str, str]] = field(default_factory=dict)
+
+class LinkValidator:
+    """Validator for the verify-link command based on links.yaml content."""
+
+    def __init__(self, args):
+        self.directory = Path(args.directory).resolve()
+        self.verbose = args.verbose
+        self.quiet = args.quiet
+        self.exit_code = LinkExitCode.OK
+        self.results: List[LinkValidationDetail] = []
+        self.summary = {"total": 0, "broken": 0, "unidirectional": 0, "disallowed": 0}
+
+    def _log(self, message: str, level: str = "INFO"):
+        if self.quiet and level != "ERROR":
+            return
+        if level == "ERROR":
+            logger.error(message)
+        else:
+            logger.info(message)
+
+    def _add_exit_flag(self, flag: LinkExitCode):
+        self.exit_code |= flag
+
+    def _load_links_yaml(self, directory: Path) -> Optional[Dict]:
+        path = directory / "links.yaml"
+        if not path.exists():
+            return None
+        try:
+            with path.open('r', encoding='utf-8') as f:
+                return yaml.safe_load(f)
+        except Exception as e:
+            logger.error(f"[ERROR] YAML parse error in {path}: {e}")
+            self._add_exit_flag(LinkExitCode.SYSTEM_ERROR)
+            return None
+    
+    def _build_link_graph(self, root_links_yaml: Dict) -> Dict[Path, Set[Path]]:
+        """Builds a complete graph of all links from all relevant links.yaml files."""
+        graph = defaultdict(set)
+        dirs_to_scan = {self.directory}
+        
+        if 'allowed_targets' in root_links_yaml:
+            for rule in root_links_yaml.get('allowed_targets', []):
+                rule_dir = (self.directory / rule['directory']).resolve()
+                if rule_dir.is_dir():
+                    dirs_to_scan.add(rule_dir)
+
+        for current_dir in dirs_to_scan:
+            links_yaml = self._load_links_yaml(current_dir)
+            if not links_yaml or 'established_links' not in links_yaml:
+                continue
+
+            for source_file, target_links in links_yaml.get('established_links', {}).items():
+                if not target_links: continue
+                source_abs = (current_dir / source_file).resolve()
+                for target_link in target_links:
+                    try:
+                        target_abs = (current_dir / target_link.replace('\\', '/')).resolve()
+                        graph[source_abs].add(target_abs)
+                    except Exception:
+                        continue
+        return graph
+
+    def _perform_all_checks(self, links_yaml: Dict):
+        """Performs all validation checks and stores results."""
+        allowed_targets = links_yaml.get('allowed_targets', [])
+        established_links = links_yaml.get('established_links', {})
+
+        if not established_links:
+            return
+
+        for source_file, target_links in established_links.items():
+            if not target_links: continue
+            for target_link in target_links:
+                detail = LinkValidationDetail(source_file, target_link)
+                self.summary["total"] += 1
+
+                # 1. Allowed Target Check
+                if not self._check_allowed_target(target_link, self.directory, allowed_targets):
+                    self.summary["disallowed"] += 1
+                    self._add_exit_flag(LinkExitCode.ERRORS)
+                    detail.results['allowed'] = ('FAIL', 'Link does not match any rule.')
+                else:
+                    detail.results['allowed'] = ('PASS', '')
+
+                # 2. File Existence Check
+                target_path = self.directory / target_link.replace('\\', '/')
+                if not target_path.exists():
+                    self.summary["broken"] += 1
+                    self._add_exit_flag(LinkExitCode.ERRORS)
+                    detail.results['exists'] = ('FAIL', f"File not found at '{target_path.resolve()}'")
+                    detail.results['bidi'] = ('SKIPPED', 'Target file does not exist.')
+                else:
+                    detail.results['exists'] = ('PASS', '')
+                    # 3. Bidirectional Check (only if file exists)
+                    status, msg = self._check_bidirectional(target_link, source_file, self.directory)
+                    detail.results['bidi'] = (status, msg)
+                    if status == "FAIL": self._add_exit_flag(LinkExitCode.ERRORS)
+                
+                self.results.append(detail)
+    
+    def _print_summary_report(self, links_yaml: Dict):
+        """Prints the new default summary view with unidirectional counts."""
+        self._log("Link Summary (Uni-TO | Total-TO <-> Total-FROM | Uni-FROM):")
+        
+        graph = self._build_link_graph(links_yaml)
+        local_md_files = sorted([p for p in self.directory.glob('*.md')])
+
+        for file_path in local_md_files:
+            abs_path = file_path.resolve()
+            
+            from_links = graph.get(abs_path, set())
+            f_total = len(from_links)
+
+            t_total = sum(1 for targets in graph.values() if abs_path in targets)
+            
+            uf_count = sum(1 for target_path in from_links if abs_path not in graph.get(target_path, set()))
+            
+            ut_count = sum(1 for source_path, targets in graph.items() if abs_path in targets and source_path not in from_links)
+
+            self._log(f"  [{ut_count:^3}] [{t_total:^3}] {file_path.name} [{f_total:^3}] [{uf_count:^3}]")
+
+    def _print_verbose_report(self):
+        """Prints the detailed, multi-check validation report."""
+        for detail in self.results:
+            self._log(f"\nVerifying link for: {detail.source_file}")
+            self._log(f"  -> {detail.target_link}")
+
+            allowed_status, allowed_msg = detail.results['allowed']
+            icon = 'V' if allowed_status == 'PASS' else '?'
+            self._log(f"     [{icon}] Allowed Target: {allowed_status}{' - ' + allowed_msg if allowed_msg else ''}")
+
+            exists_status, exists_msg = detail.results['exists']
+            icon = 'V' if exists_status == 'PASS' else '?'
+            self._log(f"     [{icon}] File Exists: {exists_status}{' - ' + exists_msg if exists_msg else ''}")
+            
+            bidi_status, bidi_msg = detail.results['bidi']
+            icon = "V" if bidi_status == "PASS" else "?" if bidi_status == "FAIL" else "?"
+            self._log(f"     [{icon}] Bidirectional Link: {bidi_status} - {bidi_msg}")
+        
+        self._log("\n---")
+        self._log("Verification Summary:")
+        self._log(f"  - Total Links Checked: {self.summary['total']}")
+        self._log(f"  - Broken Links (Not Found): {self.summary['broken']}")
+        self._log(f"  - Disallowed Targets: {self.summary['disallowed']}")
+        self._log(f"  - Unidirectional Links: {self.summary['unidirectional']}")
+
+    def _print_error_details(self):
+        """Prints a concise list of errors found during validation."""
+        if self.quiet or self.exit_code == LinkExitCode.OK:
+            return
+        
+        self._log("\n---", "ERROR")
+        self._log("Validation Errors:", "ERROR")
+        
+        check_name_map = {
+            'allowed': 'Allowed Target',
+            'exists': 'File Existence',
+            'bidi': 'Bidirectional Link'
+        }
+
+        for detail in self.results:
+            for check_key, (status, msg) in detail.results.items():
+                if status == 'FAIL':
+                    check_name = check_name_map.get(check_key, check_key)
+                    self._log(f"  - In '{detail.source_file}': Link to '{detail.target_link}'", "ERROR")
+                    self._log(f"    Reason: [{check_name}] {msg}", "ERROR")
+
+    def run(self) -> int:
+        """Main execution method."""
+        links_yaml_path = self.directory / "links.yaml"
+        if not links_yaml_path.exists():
+            logger.error(f"[ERROR] No links.yaml found in {self.directory}")
+            return LinkExitCode.SYSTEM_ERROR.value
+
+        self._log(f"Using links.yaml from: {links_yaml_path}")
+        links_yaml = self._load_links_yaml(self.directory)
+        if not links_yaml:
+            return LinkExitCode.SYSTEM_ERROR.value
+
+        # Always perform validation checks
+        self._perform_all_checks(links_yaml)
+
+        # Choose output format
+        if self.verbose:
+            self._print_verbose_report()
+        else:
+            self._print_summary_report(links_yaml)
+            self._print_error_details()  # Always show specific errors on failure
+        
+        return self.exit_code.value
+
+    def _check_allowed_target(self, target_link: str, source_dir: Path, rules: List[Dict]) -> bool:
+        """Check if a single link is allowed by the rules."""
+        try:
+            normalized_link = target_link.replace('\\', '/')
+            target_abs = (source_dir / normalized_link).resolve()
+        except Exception:
+            return False
+
+        for rule in rules:
+            rule_dir = (source_dir / rule['directory']).resolve()
+            if target_abs.parent == rule_dir:
+                if re.fullmatch(rule['filename_regex'], target_abs.name):
+                    return True
+        return False
+
+    def _check_bidirectional(self, target_link: str, source_file: str, source_dir: Path) -> Tuple[str, str]:
+        """Check for a reverse link."""
+        normalized_link = target_link.replace('\\', '/')
+        target_path = (source_dir / normalized_link).resolve()
+        
+        target_links_yaml = self._load_links_yaml(target_path.parent)
+        if not target_links_yaml or 'established_links' not in target_links_yaml:
+            return "INFO", "Target directory has no links.yaml or established_links"
+
+        source_path = (source_dir / source_file).resolve()
+        relative_back_path = Path(os.path.relpath(source_path, target_path.parent)).as_posix()
+        
+        established_in_target = [Path(p.replace('\\', '/')).as_posix() for p in target_links_yaml['established_links'].get(target_path.name, [])]
+        
+        if relative_back_path in established_in_target:
+            return "PASS", "Bidirectional link confirmed"
+        else:
+            self.summary["unidirectional"] += 1
+            return "FAIL", f"No reverse link found in {target_path.parent / 'links.yaml'}"
+
+
+# --- Command Handler Functions ---
 
 def create_file(args):
     """Create a new Markdown file."""
@@ -441,14 +682,19 @@ def delete_file(args):
         return 2
 
 
-def verify_project(args):
-    """Run validation on the project."""
+def verify_doc(args):
+    """Handler for the verify-doc command."""
     target_directory = Path(args.directory)
     if not target_directory.is_dir():
         logger.error(f"[FATAL] Invalid directory: {target_directory}")
         return 2
     validator = MarkdownValidator(verbose=args.verbose, quiet=args.quiet)
-    return validator.verify_project(target_directory, dry_run=args.dry_run)
+    return validator.verify_project(target_directory)
+
+def verify_link(args):
+    """Handler for the verify-link command."""
+    validator = LinkValidator(args)
+    return validator.run()
 
 
 def main():
@@ -459,8 +705,7 @@ def main():
     )
     parser.add_argument('--verbose', action='store_true', help='Enable detailed output for debugging')
     parser.add_argument('--quiet', action='store_true', help='Suppress non-error messages')
-    parser.add_argument('--dry-run', action='store_true', help='Perform validation without making any file changes')
-
+    
     subparsers = parser.add_subparsers(dest='command', help='Available commands', required=True)
 
     create_parser = subparsers.add_parser('create', help='Create a new Markdown file')
@@ -481,13 +726,20 @@ def main():
     delete_parser.add_argument('filename', help='Name of the file to delete')
     delete_parser.set_defaults(func=delete_file)
 
-    # Renamed 'verify' to 'verify-doc'
-    verify_parser = subparsers.add_parser('verify-doc', help='Validate all Markdown documents in the project')
-    verify_parser.add_argument('directory', nargs='?', default='.', help='The directory to validate (defaults to current directory)')
-    verify_parser.set_defaults(func=verify_project)
+    verify_doc_parser = subparsers.add_parser('verify-doc', help='Validate all Markdown documents in the project for structure')
+    verify_doc_parser.add_argument('directory', nargs='?', default='.', help='The directory to validate (defaults to current directory)')
+    verify_doc_parser.set_defaults(func=verify_doc)
+
+    verify_link_parser = subparsers.add_parser('verify-link', help='Validate established links in the links.yaml file')
+    verify_link_parser.add_argument('directory', nargs='?', default='.', help='The directory containing the links.yaml to validate')
+    verify_link_parser.set_defaults(func=verify_link)
 
     args = parser.parse_args()
+    
     if hasattr(args, 'func'):
+        args.verbose = getattr(args, 'verbose', False)
+        args.quiet = getattr(args, 'quiet', False)
+        
         exit_code = args.func(args)
         sys.exit(exit_code)
     else:
