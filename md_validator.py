@@ -681,6 +681,176 @@ def delete_file(args):
         logger.error(f"[FATAL] Failed to delete file: {e}")
         return 2
 
+# --- Helper functions for the link command ---
+
+def _load_yaml_for_linking(path: Path) -> Optional[Dict]:
+    """Loads a YAML file for the link command, creating it if it doesn't exist."""
+    if not path.exists():
+        return {'allowed_targets': [], 'established_links': {}}
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+            # Ensure top-level keys exist to prevent KeyErrors later
+            if data is None: data = {}
+            data.setdefault('allowed_targets', [])
+            data.setdefault('established_links', {})
+            return data
+    except yaml.YAMLError as e:
+        logger.error(f"[FATAL] Failed to parse YAML at {path}: {e}")
+        return None # Signal failure
+
+def _save_yaml_for_linking(path: Path, data: Dict) -> bool:
+    """Saves data to a YAML file for the link command."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            # Use sort_keys=False to maintain original order as much as possible
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False, indent=2)
+        logger.info(f"[INFO] Updated {path}")
+    except Exception as e:
+        logger.error(f"[FATAL] Failed to write YAML to {path}: {e}")
+        return False # Signal failure
+    return True
+
+def _check_link_is_allowed(target_link: str, source_dir: Path, rules: List[Dict]) -> bool:
+    """
+    Checks if a target link is valid against a set of allowed_targets rules.
+    For the 'link' command, if no rules are defined, we allow the creation.
+    The 'verify-link' command can be used later to enforce a stricter policy.
+    """
+    if not rules:
+        return True
+    try:
+        normalized_link = target_link.replace('\\', '/')
+        target_abs = (source_dir / normalized_link).resolve()
+    except Exception:
+        return False # Malformed path
+
+    for rule in rules:
+        try:
+            rule_dir = (source_dir / rule['directory']).resolve()
+            if target_abs.parent == rule_dir:
+                if re.fullmatch(rule['filename_regex'], target_abs.name):
+                    return True
+        except Exception:
+            continue # Skip malformed rules
+    return False
+
+def _add_force_rule(yaml_data: Dict, source_dir: Path, target_path: Path, yaml_path: Path):
+    """Adds an allowed_targets rule to the given yaml_data if it doesn't exist."""
+    target_dir = target_path.parent
+    target_filename = target_path.name
+    
+    relative_target_dir = Path(os.path.relpath(target_dir, source_dir)).as_posix()
+
+    if target_filename.endswith('.md'):
+        generated_regex = r'.*\.md$'
+    else:
+        generated_regex = re.escape(target_filename)
+    
+    new_rule = {
+        'directory': relative_target_dir,
+        'filename_regex': generated_regex
+    }
+    
+    allowed_targets = yaml_data.setdefault('allowed_targets', [])
+    if new_rule not in allowed_targets:
+        allowed_targets.append(new_rule)
+        logger.info(f"[INFO] --force: Added allowed_target rule in {yaml_path}")
+    else:
+        logger.info(f"[INFO] allowed_target rule already exists in {yaml_path}")
+
+def link_files(args):
+    """
+    Handler for the 'link' command.
+    
+    Establishes links in links.yaml files, with options to force creation of
+    allowed_targets rules and to create bidirectional links. It validates
+    both forward and backward links against existing rules before making changes.
+    """
+    source_path = Path(args.source_file).resolve()
+    source_dir = source_path.parent
+    source_filename = source_path.name
+    source_links_yaml_path = source_dir / 'links.yaml'
+
+    if not source_path.is_file():
+        logger.error(f"[FATAL] Source file not found or is not a file: {source_path}")
+        return 2
+
+    normalized_target_link = Path(os.path.normpath(args.target_link)).as_posix()
+    target_path = (source_dir / normalized_target_link).resolve()
+    target_dir = target_path.parent
+    target_filename = target_path.name
+    target_links_yaml_path = target_dir / 'links.yaml'
+
+    if not target_path.exists():
+        logger.warning(f"[WARN] Target file does not exist: {target_path}. Link will be created anyway.")
+
+    # --- FORWARD LINK VALIDATION ---
+    source_yaml_data = _load_yaml_for_linking(source_links_yaml_path)
+    if source_yaml_data is None: return 2
+    
+    is_allowed = _check_link_is_allowed(normalized_target_link, source_dir, source_yaml_data.get('allowed_targets', []))
+
+    if not is_allowed and not args.force:
+        logger.error(f"[FATAL] Link to '{normalized_target_link}' is not permitted by 'allowed_targets' in {source_links_yaml_path}.")
+        logger.error(f"        Use the --force flag to add a new rule and create the link.")
+        return 2
+
+    # --- BIDIRECTIONAL LINK VALIDATION ---
+    target_yaml_data = None
+    if args.bi:
+        target_yaml_data = _load_yaml_for_linking(target_links_yaml_path)
+        if target_yaml_data is None: return 2
+
+        relative_source_link = Path(os.path.relpath(source_path, target_dir)).as_posix()
+        
+        is_back_link_allowed = _check_link_is_allowed(relative_source_link, target_dir, target_yaml_data.get('allowed_targets', []))
+
+        if not is_back_link_allowed and not args.force:
+            logger.error(f"[FATAL] Bidirectional link failed: The back-link from '{target_filename}'")
+            logger.error(f"        to '{relative_source_link}' is not permitted by 'allowed_targets' in {target_links_yaml_path}.")
+            logger.error(f"        Use the --force flag to add the required rule.")
+            return 2
+    
+    # --- APPLY CHANGES (only if all validations passed) ---
+
+    # Handle --force for forward link
+    if args.force:
+        _add_force_rule(source_yaml_data, source_dir, target_path, source_links_yaml_path)
+
+    # Add the forward link
+    established = source_yaml_data.setdefault('established_links', {})
+    links_for_source = established.setdefault(source_filename, [])
+    if normalized_target_link not in links_for_source:
+        links_for_source.append(normalized_target_link)
+        logger.info(f"[INFO] Added link from '{source_filename}' to '{normalized_target_link}' in {source_links_yaml_path}")
+    else:
+        logger.info(f"[INFO] Link from '{source_filename}' to '{normalized_target_link}' already exists.")
+
+    # Handle --bi actions for backward link
+    if args.bi and target_yaml_data:
+        # Handle --force for backward link
+        if args.force:
+            _add_force_rule(target_yaml_data, target_dir, source_path, target_links_yaml_path)
+            
+        # Add the backward link
+        relative_source_link = Path(os.path.relpath(source_path, target_dir)).as_posix()
+        established_target = target_yaml_data.setdefault('established_links', {})
+        links_for_target = established_target.setdefault(target_filename, [])
+        if relative_source_link not in links_for_target:
+            links_for_target.append(relative_source_link)
+            logger.info(f"[INFO] Added back-link from '{target_filename}' to '{relative_source_link}' in {target_links_yaml_path}")
+            if not _save_yaml_for_linking(target_links_yaml_path, target_yaml_data):
+                return 2
+        else:
+            logger.info(f"[INFO] Back-link from '{target_filename}' to '{relative_source_link}' already exists.")
+
+    # Save the source links.yaml
+    if not _save_yaml_for_linking(source_links_yaml_path, source_yaml_data):
+        return 2
+
+    return 0
 
 def verify_doc(args):
     """Handler for the verify-doc command."""
@@ -725,6 +895,14 @@ def main():
     delete_parser = subparsers.add_parser('delete', help='Delete a file')
     delete_parser.add_argument('filename', help='Name of the file to delete')
     delete_parser.set_defaults(func=delete_file)
+    
+    # --- NEW: Parser for the link command ---
+    link_parser = subparsers.add_parser('link', help='Create a link between two documents in links.yaml files')
+    link_parser.add_argument('source_file', help='The source Markdown file initiating the link')
+    link_parser.add_argument('target_link', help='The target file to link to (e.g., ../other_dir/doc.md)')
+    link_parser.add_argument('--force', action='store_true', help='Update allowed_targets in the source links.yaml to permit this link')
+    link_parser.add_argument('--bi', action='store_true', help='Create a bidirectional link in both source and target links.yaml files')
+    link_parser.set_defaults(func=link_files)
 
     verify_doc_parser = subparsers.add_parser('verify-doc', help='Validate all Markdown documents in the project for structure')
     verify_doc_parser.add_argument('directory', nargs='?', default='.', help='The directory to validate (defaults to current directory)')
@@ -737,6 +915,7 @@ def main():
     args = parser.parse_args()
     
     if hasattr(args, 'func'):
+        # Propagate global flags to the args object for handlers to use
         args.verbose = getattr(args, 'verbose', False)
         args.quiet = getattr(args, 'quiet', False)
         
