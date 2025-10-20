@@ -613,6 +613,189 @@ class LinkValidator:
             return "FAIL", f"No reverse link found in {target_path.parent / 'links.yaml'}"
 
 
+# --- LinkDisplayer for the display-links command ---
+
+class LinkDisplayer:
+    """Displays a tree view of the established document links based on a directory hierarchy."""
+    HIERARCHY = ['domains', 'principles', 'rules', 'verification']
+
+    def __init__(self, args):
+        self.directory = Path(args.directory).resolve()
+
+    def _build_linkage_graph(self) -> Dict[str, List[str]]:
+        """
+        Parses all 'links.yaml' files in the project directory
+        and builds a comprehensive, directed linkage graph.
+        """
+        link_files = list(self.directory.glob("**/links.yaml"))
+        graph = defaultdict(list)
+
+        for link_file in link_files:
+            current_dir = link_file.parent
+            try:
+                with open(link_file, 'r', encoding='utf-8') as f:
+                    data = yaml.safe_load(f)
+                if data is None: continue
+            except (yaml.YAMLError, IOError) as e:
+                logger.warning(f"[WARN] Could not read or parse {link_file}: {e}")
+                continue
+
+            established_links = data.get("established_links", {})
+            if not established_links:
+                continue
+
+            for source_file, targets in established_links.items():
+                try:
+                    source_path = (current_dir / source_file).resolve()
+                    source_key = str(source_path.relative_to(self.directory)).replace('\\', '/')
+                except ValueError:
+                    continue # File might be outside the project directory
+
+                if source_key not in graph:
+                    graph[source_key] = []
+                
+                if targets is None:
+                    continue
+                
+                for target_link in targets:
+                    try:
+                        target_path = (current_dir / target_link).resolve()
+                        target_key = str(target_path.relative_to(self.directory)).replace('\\', '/')
+                        if target_key not in graph[source_key]:
+                            graph[source_key].append(target_key)
+                    except (Exception, ValueError):
+                        continue # Link might be broken or outside project
+        return dict(graph)
+
+    def _find_all_markdown_files(self) -> Dict[str, Set[str]]:
+        """
+        Scans the hierarchy directories to find all .md files that exist.
+        """
+        all_files = {level: set() for level in self.HIERARCHY}
+        for level in self.HIERARCHY:
+            level_path = self.directory / level
+            if level_path.is_dir():
+                for md_file in level_path.glob("*.md"):
+                    key = str(md_file.relative_to(self.directory)).replace('\\', '/')
+                    all_files[level].add(key)
+        return all_files
+
+    def _calculate_incoming_links(self, graph: dict) -> dict:
+        """
+        Calculates the number of incoming links for each file in the graph.
+        """
+        incoming_counts = defaultdict(int)
+        for _, targets in graph.items():
+            for target_file in targets:
+                incoming_counts[target_file] += 1
+        return incoming_counts
+
+    def _display_as_tree(self, graph: dict, all_files: dict, incoming_counts: dict):
+        """
+        Displays the linkage graph as a tree and lists any unlinked files,
+        including incoming and outgoing link counts for each file.
+        """
+        displayed_files = set()
+
+        def get_level(path_str: str) -> int:
+            try:
+                top_dir = Path(path_str.replace('\\', '/')).parts[0]
+                return self.HIERARCHY.index(top_dir)
+            except (ValueError, IndexError):
+                return -1
+
+        def format_node_label(node_path: str) -> str:
+            """Formats the filename with its link counts."""
+            in_count = incoming_counts.get(node_path, 0)
+            out_count = len(graph.get(node_path, []))
+            return f"[{in_count}] {Path(node_path).name} [{out_count}]"
+
+        def _build_tree_recursive(node: str, prefix: str):
+            displayed_files.add(node)
+            current_level = get_level(node)
+            
+            children = sorted([
+                child for child in graph.get(node, [])
+                if get_level(child) == current_level + 1
+            ])
+
+            for i, child in enumerate(children):
+                is_last = (i == len(children) - 1)
+                connector = "\\-- " if is_last else "+-- "
+                print(f"{prefix}{connector}{format_node_label(child)}")
+                new_prefix = prefix + ("    " if is_last else "|   ")
+                _build_tree_recursive(child, new_prefix)
+
+        # Part 1: Print all linked trees from the top of the hierarchy
+        logger.info("\n--- Linked Items Hierarchy ---")
+        root_nodes = sorted(list(all_files.get('domains', set())))
+        if not root_nodes:
+             logger.info("No files found in the 'domains' directory to start the tree.")
+        else:
+            logger.info("domains")
+            for i, node in enumerate(root_nodes):
+                is_last_root = (i == len(root_nodes) - 1)
+                connector = "\\-- " if is_last_root else "+-- "
+                print(f"{connector}{format_node_label(node)}")
+                
+                prefix = "    " if is_last_root else "|   "
+                _build_tree_recursive(node, prefix)
+                displayed_files.add(node)
+
+        # Part 2: Find and print files not displayed in the tree (unlinked from the hierarchy)
+        logger.info("\n--- Unlinked Items ---")
+        all_project_files = set()
+        for level_files in all_files.values():
+            all_project_files.update(level_files)
+        
+        unlinked_items = sorted(list(all_project_files - displayed_files))
+        
+        if unlinked_items:
+            for item in unlinked_items:
+                in_count = incoming_counts.get(item, 0)
+                out_count = len(graph.get(item, []))
+                level = Path(item).parts[0]
+                print(f"  - ({level}) [{in_count}] {item} [{out_count}]")
+        else:
+            logger.info("All discoverable items appear to be linked in the hierarchy.")
+
+    def run(self) -> int:
+        """Main execution method for displaying links."""
+        project_root = self.directory
+        
+        # Check current directory first
+        is_root_found = any((project_root / d).is_dir() for d in self.HIERARCHY)
+        
+        # If not found, search parent directories
+        temp_path = self.directory
+        while not is_root_found and temp_path.parent != temp_path:
+            temp_path = temp_path.parent
+            is_root_found = any((temp_path / d).is_dir() for d in self.HIERARCHY)
+            if is_root_found:
+                project_root = temp_path
+                break
+        
+        if not is_root_found:
+            logger.error(f"[ERROR] Could not find project root from '{self.directory}'.")
+            logger.error(f"        A project root must contain at least one of these directories: {self.HIERARCHY}")
+            return 1 # Error exit code
+
+        # Update the directory for the rest of the execution
+        self.directory = project_root
+        logger.info(f"Scanning for Markdown files and links in '{self.directory}'...")
+        
+        all_markdown_files = self._find_all_markdown_files()
+        if not any(all_markdown_files.values()):
+            logger.info("No markdown files found in the hierarchy directories.")
+            return 0
+            
+        linkage_graph = self._build_linkage_graph()
+        incoming_link_counts = self._calculate_incoming_links(linkage_graph)
+        
+        self._display_as_tree(linkage_graph, all_markdown_files, incoming_link_counts)
+        return 0
+
+
 # --- Command Handler Functions ---
 
 def create_file(args):
@@ -917,6 +1100,11 @@ def verify_link(args):
     validator = LinkValidator(args)
     return validator.run()
 
+def display_links(args):
+    """Handler for the 'display-links' command."""
+    displayer = LinkDisplayer(args)
+    return displayer.run()
+
 
 def main():
     """Main entry point for the CLI."""
@@ -954,7 +1142,6 @@ def main():
     link_parser.add_argument('--bi', action='store_true', help='Create a bidirectional link in both links.yaml files')
     link_parser.set_defaults(func=link_files)
     
-    # --- NEW: Parser for the unlink command ---
     unlink_parser = subparsers.add_parser('unlink', help='Remove a link between two documents from links.yaml files')
     unlink_parser.add_argument('source_file', help='The source Markdown file of the link')
     unlink_parser.add_argument('target_link', help='The target link to remove (e.g., ../other_dir/doc.md)')
@@ -969,6 +1156,11 @@ def main():
     verify_link_parser = subparsers.add_parser('verify-link', help='Validate established links in the links.yaml file')
     verify_link_parser.add_argument('directory', nargs='?', default='.', help='The directory containing the links.yaml to validate')
     verify_link_parser.set_defaults(func=verify_link)
+
+    # --- NEW: Parser for the display-links command ---
+    display_links_parser = subparsers.add_parser('display-links', help='Display a tree view of the established links based on directory structure')
+    display_links_parser.add_argument('directory', nargs='?', default='.', help='The root directory of the project to scan')
+    display_links_parser.set_defaults(func=display_links)
 
     args = parser.parse_args()
     
