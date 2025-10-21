@@ -46,6 +46,28 @@ def normalize_line_endings(text):
     return text.replace('\r\n', '\n').replace('\r', '\n')
 
 
+def normalize_gherkin_keywords(text):
+    """
+    Pre-processes Gherkin text to standardize keywords to Title Case,
+    allowing the parser to handle uppercase or mixed-case keywords.
+    """
+    if text is None:
+        return ""
+    
+    # Use re.IGNORECASE and re.MULTILINE for robust, case-insensitive matching
+    # at the start of each line.
+    text = re.sub(r"^\s*FEATURE:", "Feature:", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"^\s*BACKGROUND:", "Background:", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"^\s*SCENARIO:", "Scenario:", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"^\s*GIVEN\s", "Given ", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"^\s*WHEN\s", "When ", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"^\s*THEN\s", "Then ", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"^\s*AND\s", "And ", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"^\s*BUT\s", "But ", text, flags=re.IGNORECASE | re.MULTILINE)
+    
+    return text
+
+
 def clean_script_content(script_content):
     """
     Clean, prepare, and strip shebang from script content for execution.
@@ -375,6 +397,9 @@ def run_markdown_file(markdown_file, implementations, debug=False, json_output=F
 
     try:
         feature_content = normalize_line_endings(feature_content)
+        # **MODIFICATION**: Normalize keywords before parsing
+        feature_content = normalize_gherkin_keywords(feature_content)
+        
         parser = Parser()
         gherkin_document = parser.parse(feature_content)
         
@@ -406,6 +431,7 @@ def run_markdown_file(markdown_file, implementations, debug=False, json_output=F
                 
                 scenario_failed = False
                 scenario_context = {}
+                is_first_step = True # <-- ADDED: Flag to identify the GIVEN step
 
                 for step in scenario.get('steps', []):
                     results['summary']['steps']['total'] += 1
@@ -425,7 +451,14 @@ def run_markdown_file(markdown_file, implementations, debug=False, json_output=F
                         if step_result['status'] == 'passed':
                             results['summary']['steps']['passed'] += 1
                             if step_result.get('stdout') is not None:
+                                # This is the key change to preserve the initial context
+                                if is_first_step: # <-- ADDED: Check if this is the first step
+                                    scenario_context['GIVEN_STDOUT'] = step_result['stdout'].strip()
+                                    is_first_step = False #<-- ADDED: Unset the flag
+                                
+                                # Always update the previous step's output for simple chaining
                                 scenario_context['PREVIOUS_STEP_STDOUT'] = step_result['stdout'].strip()
+
                             if not json_output:
                                 print_colored(f"    V {step_keyword} {step_text}", Colors.GREEN)
                         else:
@@ -540,7 +573,7 @@ def main():
             output_category_dir.mkdir(parents=True, exist_ok=True)
             
             markdown_path = Path(args.markdown_file)
-            log_filename = markdown_path.with_suffix('.log').name
+            log_filename = markdown_path.with_suffix('.stdout').name
             output_log_path = output_category_dir / log_filename
             
             with open(output_log_path, 'w', encoding='utf-8') as f:

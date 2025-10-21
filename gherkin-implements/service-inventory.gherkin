@@ -1,0 +1,34 @@
+IMPLEMENTS an inventory of Entra ID services
+# This step defines the path to the data file.
+# Its output will be stored in the GIVEN_STDOUT variable for all subsequent steps in the scenario.
+ENTRA_FILE="../dashboard/data/entra-id/entra.json"
+
+if [ ! -f "$ENTRA_FILE" ]; then
+  echo "ERROR: Entra ID inventory file not found at the configured path: '$ENTRA_FILE'" >&2
+  exit 1
+fi
+
+echo "$ENTRA_FILE"
+
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS list for the services
+# This step uses the stable GIVEN_STDOUT variable to access the file path.
+# Its own output is for display and will not affect later steps.
+jq -r '.services[] | .displayName' "$GIVEN_STDOUT"
+
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS for each service provide a list of roles
+# This step also uses the stable GIVEN_STDOUT variable, ignoring the output
+# from the "When" step above.
+jq -r '.services[] | "Service: \(.displayName)\nRoles:\n" + if (.roles | length) > 0 then (.roles[] | "  - \(.roleName)") else "  - (No roles defined)" end + "\n"' "$GIVEN_STDOUT"
+
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS provide an list count of roles per service
+# This final validation step now generates a structured JSON array of services
+# and their role names. This machine-readable format directly provides a list
+# that can be easily counted, fulfilling the scenario's goal.
+jq '[ .services[] | { service: .displayName, roles: (.roles | map(.roleName)) } ]' "$GIVEN_STDOUT"
+
