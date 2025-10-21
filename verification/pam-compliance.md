@@ -25,5 +25,7 @@ FEATURE: Privilege Governance Audit
 
   SCENARIO: Count privileged human users per service group
 
-  SCENARIO: Count privileged non-human identities per service group```
+  SCENARIO: Count privileged non-human identities per service group
+
+```
 

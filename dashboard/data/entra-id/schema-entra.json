@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.entra-inventory.com/v1.0/inventory.json",
+  "title": "Entra ID Service Inventory",
+  "description": "Comprehensive inventory schema for Microsoft Entra ID services, groups, devices, and infrastructure mappings",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["metadata", "services", "groups", "devices"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Collection metadata and tenant information",
+      "required": ["collectionDate", "tenantId", "tenantName"],
+      "properties": {
+        "collectionDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "tenantId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tenantName": {
+          "type": "string"
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/service" }
+    },
+    "groups": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/group" }
+    },
+    "devices": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/device" }
+    },
+    "users": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/user" }
+    }
+  },
+  "definitions": {
+    "service": {
+      "type": "object",
+      "required": ["serviceId", "displayName", "appId", "servicePrincipalId"],
+      "properties": {
+        "serviceId": { "type": "string", "pattern": "^svc-[0-9]+$" },
+        "displayName": { "type": "string" },
+        "appId": { "type": "string", "format": "uuid" },
+        "servicePrincipalId": { "type": "string", "format": "uuid" },
+        "servicePrincipalType": { "type": "string", "enum": ["Application", "ManagedIdentity", "Legacy"] },
+        "enabled": { "type": "boolean" },
+        "userCount": { "type": "integer", "minimum": 0 },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "groups": { "type": "array", "items": { "$ref": "#/definitions/groupAssignment" } }
+      }
+    },
+    "group": {
+      "type": "object",
+      "required": ["groupId", "groupName", "memberCount"],
+      "properties": {
+        "groupId": { "type": "string", "format": "uuid" },
+        "groupName": { "type": "string" },
+        "memberCount": { "type": "integer", "minimum": 0 },
+        "members": { "type": "array", "items": { "$ref": "#/definitions/groupMember" } }
+      }
+    },
+    "device": {
+      "type": "object",
+      "required": ["deviceId", "deviceName"],
+      "properties": {
+        "deviceId": { "type": "string", "format": "uuid" },
+        "deviceName": { "type": "string" }
+      }
+    },
+    "user": {
+      "type": "object",
+      "required": ["userId", "userPrincipalName"],
+      "properties": {
+        "userId": { "type": "string", "format": "uuid" },
+        "userPrincipalName": { "type": "string", "format": "email" },
+        "userType": { "type": "string", "enum": ["Member", "Guest"] },
+        "groupMemberships": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+        "serviceAccess": { "type": "array", "items": { "type": "string", "pattern": "^svc-[0-9]+$" } }
+      }
+    },
+    "groupAssignment": {
+      "type": "object",
+      "required": ["groupId", "groupName"],
+      "properties": {
+        "groupId": { "type": "string", "format": "uuid" },
+        "groupName": { "type": "string" }
+      }
+    },
+    "groupMember": {
+      "type": "object",
+      "required": ["userId"],
+      "properties": {
+        "userId": { "type": "string", "format": "uuid" },
+        "displayName": { "type": "string" },
+        "memberType": { "type": "string", "enum": ["User", "Group", "Device", "ServicePrincipal"] },
+        "userType": { "type": "string", "enum": ["Member", "Guest"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,314 @@
+{
+  "metadata": {
+    "collectionDate": "2025-10-20T16:27:04Z",
+    "tenantId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+    "tenantName": "my.corp.ms"
+  },
+  "services": [
+    {
+      "serviceId": "svc-001",
+      "displayName": "Microsoft Office 365",
+      "appId": "00000003-0000-0000-c000-000000000000",
+      "servicePrincipalId": "a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5",
+      "enabled": true,
+      "userCount": 10,
+      "tags": ["Productivity", "Core"],
+      "roles": [
+        {
+          "roleId": "f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4",
+          "roleName": "Office 365 E3 License",
+          "roleValue": "E3_License"
+        }
+      ],
+      "groups": [
+        {
+          "groupId": "aaaaaaaa-0000-0000-0000-000000000001",
+          "groupName": "All Office 365 Users",
+          "assignedRoleId": "f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4"
+        }
+      ]
+    },
+    {
+      "serviceId": "svc-002",
+      "displayName": "Atlassian JIRA",
+      "appId": "b1b2b3b4-c5c6-d7d8-e9e0-f1f2f3f4f5f6",
+      "servicePrincipalId": "b2b2b2b2-c3c3-d4d4-e5e5-f6f6f6f6f6f6",
+      "enabled": true,
+      "userCount": 7,
+      "tags": ["Development", "Project Management"],
+      "roles": [
+        {
+          "roleId": "c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1",
+          "roleName": "JIRA User",
+          "roleValue": "jira.user"
+        },
+        {
+          "roleId": "d2d2d2d2-d2d2-d2d2-d2d2-d2d2d2d2d2d2",
+          "roleName": "JIRA Developer",
+          "roleValue": "jira.developer"
+        }
+      ],
+      "groups": [
+        {
+          "groupId": "bbbbbbbb-0000-0000-0000-000000000002",
+          "groupName": "JIRA Users",
+          "assignedRoleId": "c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1"
+        },
+        {
+          "groupId": "bbbbbbbb-0000-0000-0000-000000000003",
+          "groupName": "JIRA Developers",
+          "assignedRoleId": "d2d2d2d2-d2d2-d2d2-d2d2-d2d2d2d2d2d2"
+        }
+      ]
+    },
+    {
+      "serviceId": "svc-003",
+      "displayName": "SAP ERP",
+      "appId": "d3d4d5d6-e7e8-f9f0-a1a2-b3b4b5b6b7b8",
+      "servicePrincipalId": "c3c3c3c3-d4d4-e5e5-f6f6-a7a7a7a7a7a7",
+      "enabled": true,
+      "userCount": 4,
+      "tags": ["Finance", "ERP"],
+      "roles": [
+        {
+          "roleId": "e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1",
+          "roleName": "Expense Reporter",
+          "roleValue": "sap.expense.reporter"
+        },
+        {
+          "roleId": "f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2",
+          "roleName": "Task Scheduler",
+          "roleValue": "sap.task.scheduler"
+        }
+      ],
+      "groups": [
+        {
+          "groupId": "cccccccc-0000-0000-0000-000000000004",
+          "groupName": "SAP Expense Submitters",
+          "assignedRoleId": "e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1"
+        }
+      ]
+    },
+    {
+      "serviceId": "svc-004",
+      "displayName": "Microsoft Teams",
+      "appId": "cc15fd57-2c6c-4114-a894-1a395af5683c",
+      "servicePrincipalId": "d4d4d4d4-e5e5-f6f6-a7a7-b8b8b8b8b8b8",
+      "enabled": true,
+      "userCount": 10,
+      "tags": ["Collaboration"],
+      "roles": [],
+      "groups": [
+        {
+          "groupId": "dddddddd-0000-0000-0000-000000000005",
+          "groupName": "Sales Department"
+        },
+        {
+          "groupId": "eeeeeeee-0000-0000-0000-000000000006",
+          "groupName": "Engineering Department"
+        },
+        {
+          "groupId": "ffffffff-0000-0000-0000-000000000007",
+          "groupName": "Finance Department"
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "groupId": "aaaaaaaa-0000-0000-0000-000000000001",
+      "groupName": "All Office 365 Users",
+      "groupType": "Security",
+      "memberCount": 10,
+      "assignedServices": ["svc-001"],
+      "members": [
+        {"userId": "11111111-1111-1111-1111-000000000001"},
+        {"userId": "11111111-1111-1111-1111-000000000002"},
+        {"userId": "11111111-1111-1111-1111-000000000003"},
+        {"userId": "11111111-1111-1111-1111-000000000004"},
+        {"userId": "11111111-1111-1111-1111-000000000005"},
+        {"userId": "11111111-1111-1111-1111-000000000006"},
+        {"userId": "11111111-1111-1111-1111-000000000007"},
+        {"userId": "11111111-1111-1111-1111-000000000008"},
+        {"userId": "11111111-1111-1111-1111-000000000009"},
+        {"userId": "11111111-1111-1111-1111-000000000010"}
+      ]
+    },
+    {
+      "groupId": "bbbbbbbb-0000-0000-0000-000000000002",
+      "groupName": "JIRA Users",
+      "groupType": "Security",
+      "memberCount": 2,
+      "assignedServices": ["svc-002"],
+      "members": [
+        {"userId": "11111111-1111-1111-1111-000000000003"},
+        {"userId": "11111111-1111-1111-1111-000000000004"}
+      ]
+    },
+    {
+      "groupId": "bbbbbbbb-0000-0000-0000-000000000003",
+      "groupName": "JIRA Developers",
+      "groupType": "Security",
+      "memberCount": 5,
+      "assignedServices": ["svc-002"],
+      "members": [
+        {"userId": "11111111-1111-1111-1111-000000000001"},
+        {"userId": "11111111-1111-1111-1111-000000000002"},
+        {"userId": "11111111-1111-1111-1111-000000000008"},
+        {"userId": "11111111-1111-1111-1111-000000000009"},
+        {"userId": "11111111-1111-1111-1111-000000000010"}
+      ]
+    },
+    {
+      "groupId": "cccccccc-0000-0000-0000-000000000004",
+      "groupName": "SAP Expense Submitters",
+      "groupType": "Security",
+      "memberCount": 3,
+      "assignedServices": ["svc-003"],
+      "members": [
+        {"userId": "11111111-1111-1111-1111-000000000004"},
+        {"userId": "11111111-1111-1111-1111-000000000005"},
+        {"userId": "11111111-1111-1111-1111-000000000006"}
+      ]
+    },
+    {
+      "groupId": "dddddddd-0000-0000-0000-000000000005",
+      "groupName": "Sales Department",
+      "groupType": "Microsoft 365",
+      "memberCount": 2,
+      "assignedServices": ["svc-004"],
+      "members": [
+        {"userId": "11111111-1111-1111-1111-000000000003"},
+        {"userId": "11111111-1111-1111-1111-000000000004"}
+      ]
+    },
+    {
+      "groupId": "eeeeeeee-0000-0000-0000-000000000006",
+      "groupName": "Engineering Department",
+      "groupType": "Microsoft 365",
+      "memberCount": 5,
+      "assignedServices": ["svc-004"],
+      "members": [
+        {"userId": "11111111-1111-1111-1111-000000000001"},
+        {"userId": "11111111-1111-1111-1111-000000000002"},
+        {"userId": "11111111-1111-1111-1111-000000000008"},
+        {"userId": "11111111-1111-1111-1111-000000000009"},
+        {"userId": "11111111-1111-1111-1111-000000000010"}
+      ]
+    },
+    {
+      "groupId": "ffffffff-0000-0000-0000-000000000007",
+      "groupName": "Finance Department",
+      "groupType": "Microsoft 365",
+      "memberCount": 3,
+      "assignedServices": ["svc-004"],
+      "members": [
+        {"userId": "11111111-1111-1111-1111-000000000005"},
+        {"userId": "11111111-1111-1111-1111-000000000006"},
+        {"userId": "11111111-1111-1111-1111-000000000007"}
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "deviceId": "22222222-2222-2222-2222-000000000001",
+      "deviceName": "INNOVATE-LT-ALICE",
+      "osType": "Windows 11 Enterprise",
+      "compliant": true,
+      "intuneManaged": true,
+      "primaryUser": "alice@my.corp.ms"
+    }
+  ],
+  "users": [
+    {
+      "userId": "11111111-1111-1111-1111-000000000001",
+      "userPrincipalName": "alice@my.corp.ms",
+      "displayName": "Alice Smith",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000003", "eeeeeeee-0000-0000-0000-000000000006"],
+      "serviceAccess": ["svc-001", "svc-002", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000002",
+      "userPrincipalName": "bob@my.corp.ms",
+      "displayName": "Bob Johnson",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000003", "eeeeeeee-0000-0000-0000-000000000006"],
+      "serviceAccess": ["svc-001", "svc-002", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000003",
+      "userPrincipalName": "charlie@my.corp.ms",
+      "displayName": "Charlie Brown",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000002", "dddddddd-0000-0000-0000-000000000005"],
+      "serviceAccess": ["svc-001", "svc-002", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000004",
+      "userPrincipalName": "diana@my.corp.ms",
+      "displayName": "Diana Prince",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000002", "cccccccc-0000-0000-0000-000000000004", "dddddddd-0000-0000-0000-000000000005"],
+      "serviceAccess": ["svc-001", "svc-002", "svc-003", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000005",
+      "userPrincipalName": "eve@my.corp.ms",
+      "displayName": "Eve Moneypenny",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "cccccccc-0000-0000-0000-000000000004", "ffffffff-0000-0000-0000-000000000007"],
+      "serviceAccess": ["svc-001", "svc-003", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000006",
+      "userPrincipalName": "frank@my.corp.ms",
+      "displayName": "Frank Castle",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "cccccccc-0000-0000-0000-000000000004", "ffffffff-0000-0000-0000-000000000007"],
+      "serviceAccess": ["svc-001", "svc-003", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000007",
+      "userPrincipalName": "grace@my.corp.ms",
+      "displayName": "Grace Hopper",
+      "userType": "Member",
+      "accountEnabled": false,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "ffffffff-0000-0000-0000-000000000007"],
+      "serviceAccess": ["svc-001", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000008",
+      "userPrincipalName": "heidi@my.corp.ms",
+      "displayName": "Heidi Lamarr",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000003", "eeeeeeee-0000-0000-0000-000000000006"],
+      "serviceAccess": ["svc-001", "svc-002", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000009",
+      "userPrincipalName": "ivan@my.corp.ms",
+      "displayName": "Ivan Drago",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000003", "eeeeeeee-0000-0000-0000-000000000006"],
+      "serviceAccess": ["svc-001", "svc-002", "svc-004"]
+    },
+    {
+      "userId": "11111111-1111-1111-1111-000000000010",
+      "userPrincipalName": "judy@my.corp.ms",
+      "displayName": "Judy Hopps",
+      "userType": "Member",
+      "accountEnabled": true,
+      "groupMemberships": ["aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000003", "eeeeeeee-0000-0000-0000-000000000006"],
+      "serviceAccess": ["svc-001", "svc-002", "svc-004"]
+    }
+  ]
+}
