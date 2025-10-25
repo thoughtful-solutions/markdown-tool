@@ -33,14 +33,15 @@ IMPLEMENTS provide an list count of roles per service
 # that can be easily counted, fulfilling the scenario's goal.
 
 # Define a path for the clean JSON output file
-OUTPUT_FILE="${CATEGORY_DIR}/service-roles.json"
+OUTPUT_FILE="${CATEGORY_DIR}/service-tag.json"
 
 # Run the query, piping the result to 'tee'
 # 'tee' writes the JSON to the $OUTPUT_FILE *and* to stdout
 # This allows the Gherkin runner to validate the output while
 # simultaneously creating a clean data file for your dashboard.
 jq '[ .services[] |
-{ service: .displayName, roles: (.roles | map(.roleName)) } ]' "$GIVEN_STDOUT" | tee "$OUTPUT_FILE"
+{ model: .displayName, count: (.roles | length) } ]' "$GIVEN_STDOUT" |
+tee "$OUTPUT_FILE"
 
 # Optional: Log to stderr so it appears in the runner's output
 echo "Dashboard data written to $OUTPUT_FILE" >&2

@@ -1,4 +1,4 @@
-# V: Service Tag Querying
+# V: Service Tag
 
 ## Description
 
