@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr.bin/env python3
 """
 Gherkin Test Runner with Cross-Platform Support
 Executes Gherkin feature blocks extracted from Markdown files.
@@ -382,7 +382,7 @@ def extract_from_markdown(markdown_file):
         return None, None
 
 
-def run_markdown_file(markdown_file, implementations, debug=False, json_output=False):
+def run_markdown_file(markdown_file, implementations, output_dir, debug=False, json_output=False):
     """
     Extracts Gherkin from a markdown file and runs it using the provided implementations.
     Returns the results and the extracted category.
@@ -431,7 +431,21 @@ def run_markdown_file(markdown_file, implementations, debug=False, json_output=F
                 
                 scenario_failed = False
                 scenario_context = {}
-                is_first_step = True # <-- ADDED: Flag to identify the GIVEN step
+
+                # Calculate and inject the category output directory into the context
+                if category:
+                    output_category_dir = Path(output_dir) / 'categories' / category
+                    # Ensure the directory exists *before* steps run
+                    output_category_dir.mkdir(parents=True, exist_ok=True)
+                    # Pass the absolute, resolved path to the script
+                    scenario_context['CATEGORY_DIR'] = str(output_category_dir.resolve())
+                else:
+                    # Fallback to the base output dir if no category is found
+                    base_dir = Path(output_dir).resolve()
+                    base_dir.mkdir(parents=True, exist_ok=True)
+                    scenario_context['CATEGORY_DIR'] = str(base_dir)
+                
+                is_first_step = True 
 
                 for step in scenario.get('steps', []):
                     results['summary']['steps']['total'] += 1
@@ -452,9 +466,9 @@ def run_markdown_file(markdown_file, implementations, debug=False, json_output=F
                             results['summary']['steps']['passed'] += 1
                             if step_result.get('stdout') is not None:
                                 # This is the key change to preserve the initial context
-                                if is_first_step: # <-- ADDED: Check if this is the first step
+                                if is_first_step: 
                                     scenario_context['GIVEN_STDOUT'] = step_result['stdout'].strip()
-                                    is_first_step = False #<-- ADDED: Unset the flag
+                                    is_first_step = False 
                                 
                                 # Always update the previous step's output for simple chaining
                                 scenario_context['PREVIOUS_STEP_STDOUT'] = step_result['stdout'].strip()
@@ -518,12 +532,44 @@ def print_summary(results):
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description='Gherkin Test Runner for Markdown Files')
+    
+    # --- THIS IS THE INTEGRATED HELP TEXT ---
+    epilog_text = """
+Implementation scripts (in the --impl-dir) have access to several
+environment variables during execution:
+
+  $GIVEN_STDOUT
+    The complete stdout from the first 'Given' step in the scenario.
+    This is stable and persists across all steps.
+
+  $PREVIOUS_STEP_STDOUT
+    The stdout from the *immediately* preceding step.
+
+  $CATEGORY_DIR
+    The calculated, absolute path to the output directory for the
+    current feature's category (e.g., ../dashboard/categories/operations).
+    This is derived from the --output-dir and the **Category** metadata.
+
+  $MATCH_1, $MATCH_2, ...
+    Capture groups from the step's 'IMPLEMENTS' regex pattern.
+    (e.g., IMPLEMENTS an inventory for (.*) would put the matched
+    text into $MATCH_1)
+"""
+
+    parser = argparse.ArgumentParser(
+        description='Gherkin Test Runner for Markdown Files',
+        epilog=epilog_text,
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    # --- END OF INTEGRATED HELP TEXT ---
+
     parser.add_argument('markdown_file', help='Path to the .md file containing Gherkin features')
     parser.add_argument('--impl-dir', default='../gherkin-implements', 
                        help='Directory containing implementation files (default: ../gherkin-implements)')
+    
     parser.add_argument('--output-dir', default='../dashboard',
-                        help='Base directory for output logs (default: ../dashboard)')
+                        help='Base directory for output. A category-specific subdir (e.g., "categories/<category_name>") will be created and passed to scripts as $CATEGORY_DIR. (default: ../dashboard)')
+
     parser.add_argument('--json', action='store_true', help='Output results as JSON to stdout')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
     parser.add_argument('--display', action='store_true', help='Display extracted Gherkin and category, then exit')
@@ -563,14 +609,13 @@ def main():
         print_colored("No step implementations found", Colors.RED, file=sys.stderr)
         sys.exit(1)
     
-    results, category = run_markdown_file(args.markdown_file, implementations, args.debug, args.json)
+    results, category = run_markdown_file(args.markdown_file, implementations, args.output_dir, args.debug, args.json)
     
     # Write log file to the specified directory structure
     if category:
         try:
             output_base_dir = Path(args.output_dir)
             output_category_dir = output_base_dir / 'categories' / category
-            output_category_dir.mkdir(parents=True, exist_ok=True)
             
             markdown_path = Path(args.markdown_file)
             log_filename = markdown_path.with_suffix('.stdout').name

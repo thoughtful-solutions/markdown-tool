@@ -12,10 +12,10 @@ Verifies the portfolio's alignment with the "cloud-first" business strategy by m
 
 ## Features
 ```gherkin
-FEATURE: Cloud Service Model Distribution
+FEATURE: Service Model Classification
 
-  SCENARIO: Report on Cloud Service Types
-    GIVEN a complete list of deployed services
-    WHEN the service type is identified as [IAAS|SAAS|PAAS]
-    THEN return the percentage distribution of each service type
+  SCENARIO: Report on service model distribution
+    GIVEN an inventory of Entra ID services
+    WHEN services are classified by their type
+    THEN produce a JSON report of the counts for SaaS, PaaS/IaaS, and Local services
 ```

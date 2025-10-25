@@ -1,0 +1,52 @@
+# MODIFIED: This step now also selects other arrays, like '.users' and '.groups',
+# to be counted as unclassified.
+IMPLEMENTS WHEN services are classified by their type
+
+jq '
+  {
+    "saas_services": (
+      .services | map(select(.servicePrincipalType != "ManagedIdentity"))
+    ),
+    "paas_iaas_services": (
+      .services | map(select(.servicePrincipalType == "ManagedIdentity"))
+    ),
+    "local_devices": .devices,
+    
+    # We combine .users and .groups into a new "unclassified_items" array
+    "unclassified_items": (.users + .groups)
+  }
+' "$GIVEN_STDOUT"
+
+# -----------------------------------------------------------------------------
+
+# MODIFIED: This step reads the classified JSON from $PREVIOUS_STEP_STDOUT
+# and adds the "Unclassified" count to the final report.
+IMPLEMENTS THEN produce a JSON report of the counts for SaaS, PaaS/IaaS, and Local services
+
+# Define the output file path.
+OUTPUT_FILE="${CATEGORY_DIR}/service-model-distribution.json"
+
+# Run the query, piping the result to 'tee'
+jq '
+  [
+    {
+      "model": "SaaS",
+      "count": (.saas_services | length)
+    },
+    {
+      "model": "PaaS/IaaS",
+      "count": (.paas_iaas_services | length)
+    },
+    {
+      "model": "Local",
+      "count": (.local_devices | length)
+    },
+    {
+      "model": "Unclassified (Users/Groups)",
+      "count": (.unclassified_items | length)
+    }
+  ]
+' <<< "$PREVIOUS_STEP_STDOUT" | tee "$OUTPUT_FILE"
+
+# Log to stderr so it appears in the runner's output
+echo "Dashboard data written to $OUTPUT_FILE" >&2

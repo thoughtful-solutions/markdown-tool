@@ -1,0 +1,11 @@
+
+jq -r "[.services[] | {service: .displayName, roleCount: (.roles | length)}] | sort_by(.roleCount) | reverse | .[] | \"\(.roleCount)\t\(.service)\"" entra.json
+
+
+jq ".users[] | select(.accountEnabled == false and (.groupMemberships | length) > 0) | {user: .displayName, groups: .groupMemberships}" entra.json
+
+
+jq -r ".services[] | \"\(.displayName) (ID: \(.serviceId)) - Assigned User Count: \(.userCount)\", \"  Assigned Groups:\", (.groups[]? | \"    - \(.groupName)\")" entra.json
+
+
+jq -r ".users[] | select(.accountEnabled == true) | \"\(.displayName) (\(.userPrincipalName)):\", (.serviceAccess[]? | \"  - \(.)\")" entra.json                            

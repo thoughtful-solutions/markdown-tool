@@ -28,7 +28,19 @@ jq -r '.services[] | "Service: \(.displayName)\nRoles:\n" + if (.roles | length)
 
 IMPLEMENTS provide an list count of roles per service
 # This final validation step now generates a structured JSON array of services
-# and their role names. This machine-readable format directly provides a list
+# and their role names.
+# This machine-readable format directly provides a list
 # that can be easily counted, fulfilling the scenario's goal.
-jq '[ .services[] | { service: .displayName, roles: (.roles | map(.roleName)) } ]' "$GIVEN_STDOUT"
 
+# Define a path for the clean JSON output file
+OUTPUT_FILE="${CATEGORY_DIR}/service-roles.json"
+
+# Run the query, piping the result to 'tee'
+# 'tee' writes the JSON to the $OUTPUT_FILE *and* to stdout
+# This allows the Gherkin runner to validate the output while
+# simultaneously creating a clean data file for your dashboard.
+jq '[ .services[] |
+{ service: .displayName, roles: (.roles | map(.roleName)) } ]' "$GIVEN_STDOUT" | tee "$OUTPUT_FILE"
+
+# Optional: Log to stderr so it appears in the runner's output
+echo "Dashboard data written to $OUTPUT_FILE" >&2

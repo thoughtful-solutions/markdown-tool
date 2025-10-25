@@ -39,7 +39,7 @@
           "status": "passed",
           "output": null,
           "stdout": "[\n  {\n    \"service\": \"Microsoft Office 365\",\n    \"roles\": [\n      \"Office 365 E3 License\"\n    ]\n  },\n  {\n    \"service\": \"Atlassian JIRA\",\n    \"roles\": [\n      \"JIRA User\",\n      \"JIRA Developer\"\n    ]\n  },\n  {\n    \"service\": \"SAP ERP\",\n    \"roles\": [\n      \"Expense Reporter\",\n      \"Task Scheduler\"\n    ]\n  },\n  {\n    \"service\": \"Microsoft Teams\",\n    \"roles\": []\n  }\n]\n",
-          "stderr": null,
+          "stderr": "Dashboard data written to C:\\Users\\msn\\source\\markdown-tool\\dashboard\\categories\\operations/service-roles.json\n",
           "exit_code": 0,
           "keyword": "Then",
           "text": "provide an list count of roles per service"
