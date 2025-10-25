@@ -24,7 +24,7 @@ jq '
 IMPLEMENTS THEN produce a JSON report of the counts for SaaS, PaaS/IaaS, and Local services
 
 # Define the output file path.
-OUTPUT_FILE="${CATEGORY_DIR}/cloud-alignment.json"
+OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}.json"
 
 # Run the query, piping the result to 'tee'
 jq '

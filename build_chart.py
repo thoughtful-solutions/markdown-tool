@@ -15,7 +15,7 @@ from typing import Optional, Tuple
 
 def parse_verification_file(filepath: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """
-    Parses a verification markdown file to find the Title, Category, and Display Control.
+    Parses a verification markdown file to find the Feature Title, Category, and Display Control.
 
     Args:
         filepath: The path to the markdown file.
@@ -27,9 +27,16 @@ def parse_verification_file(filepath: str) -> Tuple[Optional[str], Optional[str]
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # 1. Find Title (from H1 tag, e.g., # V: My Title)
-        title_match = re.search(r'^\s*#\s*V:\s*(.*)$', content, re.IGNORECASE | re.MULTILINE)
+        # --- MODIFIED SECTION ---
+        # 1. Find Title (from Gherkin FEATURE tag)
+        # This now looks for "FEATURE: ..." instead of "# V: ..."
+        title_match = re.search(
+            r'^\s*FEATURE:\s*(.*)$',
+            content,
+            re.IGNORECASE | re.MULTILINE
+        )
         title = title_match.group(1).strip() if title_match else None
+        # --- END OF MODIFIED SECTION ---
 
         # 2. Find Category
         category_match = re.search(
@@ -367,8 +374,16 @@ def main():
     
     title, category, control = parse_verification_file(args.filepath)
     
-    if not all([title, category, control]):
-        print(f"    **ERROR**: Could not find all metadata (Title, Category, Display Control) in {md_file_path.name}.")
+    if not title:
+        print(f"    **ERROR**: Could not find 'FEATURE:' name in {md_file_path.name}.")
+        print("    Generation failed.")
+        sys.exit(1)
+    if not category:
+        print(f"    **ERROR**: Could not find 'Category:' in {md_file_path.name}.")
+        print("    Generation failed.")
+        sys.exit(1)
+    if not control:
+        print(f"    **ERROR**: Could not find 'Display Control:' in {md_file_path.name}.")
         print("    Generation failed.")
         sys.exit(1)
         

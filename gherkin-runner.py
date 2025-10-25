@@ -1,4 +1,4 @@
-#!/usr.bin/env python3
+#!/usr/bin/env python3
 """
 Gherkin Test Runner with Cross-Platform Support
 Executes Gherkin feature blocks extracted from Markdown files.
@@ -431,6 +431,10 @@ def run_markdown_file(markdown_file, implementations, output_dir, debug=False, j
                 
                 scenario_failed = False
                 scenario_context = {}
+                
+                # --- MODIFIED: Add VFILENAME to context ---
+                scenario_context['VFILENAME'] = Path(markdown_file).stem
+                # --- END MODIFICATION ---
 
                 # Calculate and inject the category output directory into the context
                 if category:
@@ -533,7 +537,7 @@ def print_summary(results):
 def main():
     """Main entry point."""
     
-    # --- THIS IS THE INTEGRATED HELP TEXT ---
+    # --- THIS IS THE UPDATED HELP TEXT ---
     epilog_text = """
 Implementation scripts (in the --impl-dir) have access to several
 environment variables during execution:
@@ -550,18 +554,22 @@ environment variables during execution:
     current feature's category (e.g., ../dashboard/categories/operations).
     This is derived from the --output-dir and the **Category** metadata.
 
+  $VFILENAME
+    The filename (without extension) of the verification .md file
+    being processed (e.g., "service-tag").
+
   $MATCH_1, $MATCH_2, ...
     Capture groups from the step's 'IMPLEMENTS' regex pattern.
     (e.g., IMPLEMENTS an inventory for (.*) would put the matched
     text into $MATCH_1)
 """
+    # --- END OF UPDATED HELP TEXT ---
 
     parser = argparse.ArgumentParser(
         description='Gherkin Test Runner for Markdown Files',
         epilog=epilog_text,
         formatter_class=argparse.RawTextHelpFormatter
     )
-    # --- END OF INTEGRATED HELP TEXT ---
 
     parser.add_argument('markdown_file', help='Path to the .md file containing Gherkin features')
     parser.add_argument('--impl-dir', default='../gherkin-implements', 

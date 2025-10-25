@@ -33,7 +33,7 @@ IMPLEMENTS provide an list count of roles per service
 # that can be easily counted, fulfilling the scenario's goal.
 
 # Define a path for the clean JSON output file
-OUTPUT_FILE="${CATEGORY_DIR}/service-tag.json"
+OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}.json"
 
 # Run the query, piping the result to 'tee'
 # 'tee' writes the JSON to the $OUTPUT_FILE *and* to stdout
