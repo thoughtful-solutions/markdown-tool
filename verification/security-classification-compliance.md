@@ -21,13 +21,7 @@ FEATURE: Security Classification Completeness
   SCENARIO: All services have complete security classifications
     GIVEN a service inventory from the CMDB
     WHEN checking security-related fields
-    THEN each service must have valid (A-E) values for:
-      AND | Field                | Description                           |
-      AND | SC General           | Overall security classification       |
-      AND | SC Availability      | Availability requirements             |
-      AND | SC Confidentiality   | Data confidentiality requirements     |
-      AND | SC Integrity         | Data integrity requirements           |
-      AND | SC Protection Target | Overall protection target level       |
+    THEN each service must have valid values for all required SC fields
     AND the percentage of services with complete SC fields should be > 95%
     
   SCENARIO: Services have business continuity classification
@@ -59,4 +53,3 @@ FEATURE: Security Classification Completeness
       AND Count of services at each BCM Class (0-4)
       AND List of high-risk services (BCM 0-2 with SC D/E)
 ```
-
