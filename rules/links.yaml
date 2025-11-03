@@ -9,18 +9,24 @@ established_links:
   - ../principles/sustainability.md
   - ../principles/resiliency.md
   - ../principles/supportability.md
+  - ../verification/security-classification-compliance.md
+  - ../verification/service-catalogue-completeness.md
+  - ../verification/service-ownership-governance.md
   reproducible.md:
   - ../principles/resiliency.md
   - ../principles/agility.md
   - ../principles/interoperability.md
   - ../verification/cloud-alignment.md
   - ../verification/pam-compliance.md
+  - ../verification/security-classification-compliance.md
   securable.md:
   - ../principles/resiliency.md
   - ../principles/supportability.md
   - ../verification/identity-lifecycle.md
   - ../verification/cloud-alignment.md
   - ../verification/pam-compliance.md
+  - ../verification/security-classification-compliance.md
+  - ../verification/service-ownership-governance.md
   integratable.md:
   - ../principles/agility.md
   - ../principles/supportability.md
@@ -28,3 +34,5 @@ established_links:
   - ../verification/identity-lifecycle.md
   - ../verification/cloud-alignment.md
   - ../verification/pam-compliance.md
+  - ../verification/service-catalogue-completeness.md
+  - ../verification/service-ownership-governance.md
