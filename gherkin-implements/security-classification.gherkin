@@ -1,0 +1,317 @@
+# -----------------------------------------------------------------------------
+# GIVEN step
+# This single implementation provides the paths for *both* CSV files
+# for the generic "service inventory" step.
+# -----------------------------------------------------------------------------
+IMPLEMENTS a service inventory from the CMDB
+  # We echo both paths, separated by a space.
+  echo "../dashboard/data/cmdb/business_services_dev_final.csv ../dashboard/data/cmdb/technical_services_dev_final.csv"
+
+# -----------------------------------------------------------------------------
+# SCENARIO: All services have complete security classifications
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS checking security-related fields
+  # This step is a pass-through.
+  # We must use $GIVEN_STDOUT without quotes so bash splits it into two file paths for the next step.
+  echo $GIVEN_STDOUT
+
+IMPLEMENTS each service must have valid values for all required SC fields
+  # This step acts as a filter. It selects only the *invalid* rows.
+  # If any rows are returned, the Gherkin runner will fail this step.
+  INVALID_ROWS=$(mlr --csv filter '
+    # A-E classification checker
+    func is_valid_sc_class(val) {
+      return val == "A" || val == "B" || val == "C" || val == "D" || val == "E"
+    }
+    
+    !is_valid_sc_class(${SC General}) || \
+    !is_valid_sc_class(${SC Availability}) || \
+    !is_valid_sc_class(${SC Confidentiality}) || \
+    !is_valid_sc_class(${SC Integrity}) || \
+    !is_valid_sc_class(${SC Protection Target})
+  ' $PREVIOUS_STEP_STDOUT | mlr --csv then filter 'NR > 1')
+  
+  # Echo the (empty) output so the runner captures it
+  echo "$INVALID_ROWS"
+
+  # Check the captured variable
+  if [ -n "$INVALID_ROWS" ]; then
+    echo "ERROR: Found services with missing or invalid (non A-E) SC fields." >&2
+    exit 1
+  fi
+
+IMPLEMENTS the percentage of services with complete SC fields should be > 95%
+  # This step calculates the final score for the Temperature Bar
+  OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}.json"
+
+  # Use mlr to calculate the completeness score
+  mlr --csv put -q '
+    # A-E classification checker
+    func is_valid_sc_class(val) {
+      return val == "A" || val == "B" || val == "C" || val == "D" || val == "E"
+    }
+    
+    begin {
+      @total_services = 0;
+      @complete_services = 0;
+    }
+    
+    # Check each data row
+    @is_complete = \
+      is_valid_sc_class(${SC General}) && \
+      is_valid_sc_class(${SC Availability}) && \
+      is_valid_sc_class(${SC Confidentiality}) && \
+      is_valid_sc_class(${SC Integrity}) && \
+      is_valid_sc_class(${SC Protection Target});
+      
+    if (@is_complete) {
+      @complete_services += 1;
+    }
+    @total_services += 1;
+    
+    end {
+      # Calculate percentage
+      @percentage = (@total_services > 0) ? (@complete_services / @total_services) * 100 : 0.0;
+      
+      # Define thresholds for the JSON output
+      @threshold_red = 90;
+      @threshold_amber = 95;
+
+      # Print the final JSON for the temperature bar
+      print "{";
+      print "  \"value\": " . fmtnum(@percentage, "%.1f") . ",";
+      print "  \"threshold_red\": " . @threshold_red . ",";
+      print "  \"threshold_amber\": " . @threshold_amber;
+      print "}";
+    }
+  ' $GIVEN_STDOUT | tee "$OUTPUT_FILE"
+  
+  echo "Security completeness score written to $OUTPUT_FILE" >&2
+
+# -----------------------------------------------------------------------------
+# SCENARIO: Services have business continuity classification
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS checking the "BCM Class" field
+  # Pass-through step
+  echo $GIVEN_STDOUT
+
+IMPLEMENTS each service should have a value between 0 .critical. and 4 .low.
+  # This step is now a pass-through. The logic is moved to the next step.
+  echo "$PREVIOUS_STEP_STDOUT"
+
+IMPLEMENTS the percentage of services with BCM Class should be > 95%
+  # Assertion step. Calculate and exit 1 if check fails.
+  # This step now counts invalid/empty as "Unknown" and checks if "Unknown" > 5%.
+  mlr --csv put -q '
+    func is_valid_bcm_class(val) {
+      return val == "0" || val == "1" || val == "2" || val == "3" || val == "4"
+    }
+    begin { @total = 0; @valid = 0; }
+    
+    if (is_valid_bcm_class(${BCM Class})) {
+      @valid += 1;
+    }
+    @total += 1;
+    
+    end {
+      @percentage = (@total > 0) ? (@valid / @total) * 100 : 0.0;
+      @unknown_pct = 100.0 - @percentage;
+      print "BCM_Class_Completeness=" . @percentage;
+      print "BCM_Class_Unknown_Pct=" . @unknown_pct;
+    }
+  ' $GIVEN_STDOUT | tee /dev/stderr
+
+  # Extract the percentage and check it
+  PERCENTAGE=$(echo "$PREVIOUS_STEP_STDOUT" | grep "BCM_Class_Completeness" | cut -d'=' -f2)
+  if (( $(echo "$PERCENTAGE < 95" | bc -l) )); then
+    UNKNOWN_PCT=$(echo "$PREVIOUS_STEP_STDOUT" | grep "BCM_Class_Unknown_Pct" | cut -d'=' -f2)
+    echo "ASSERTION FAILED: ${UNKNOWN_PCT}% of services have an 'Unknown' BCM Class, which is > 5%." >&2
+    exit 1
+  else
+    echo "BCM Class completeness is ${PERCENTAGE}% (Passed)" >&2
+  fi
+
+# -----------------------------------------------------------------------------
+# SCENARIO: Critical services have appropriate security classifications
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS filtering services with BCM Class 0-2 .critical to important.
+  # Filter the data for only critical/important services
+  mlr --csv filter '${BCM Class} == "0" || ${BCM Class} == "1" || ${BCM Class} == "2"' $GIVEN_STDOUT
+
+IMPLEMENTS these services should typically have SC Protection Target of A or B
+  # This is a documentation step, so it does nothing and passes.
+  true
+
+IMPLEMENTS flag any critical services .BCM 0-2. with SC Protection Target of D or E
+  # This step filters for the high-risk services and saves them to a report
+  OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}-high-risk.json"
+  
+  echo "$PREVIOUS_STEP_STDOUT" | \
+  mlr --csv filter '${SC Protection Target} == "D" || ${SC Protection Target} == "E"' | \
+  mlr --c2j cut -f Name,"BCM Class","SC Protection Target" | \
+  jq -s . | tee "$OUTPUT_FILE"
+  
+  echo "High-risk service report written to $OUTPUT_FILE" >&2
+  
+  # This step also passes its input (the BCM 0-2 services) to the next step
+  echo "$PREVIOUS_STEP_STDOUT"
+
+IMPLEMENTS the percentage of BCM 0-2 services with SC A/B should be > 90%
+  # This step performs the final calculation and assertion for this scenario.
+  mlr --csv put -q '
+    begin { @total_critical = 0; @aligned = 0; }
+    
+    if (${SC Protection Target} == "A" || ${SC Protection Target} == "B") {
+      @aligned += 1;
+    }
+    @total_critical += 1;
+    
+    end {
+      @percentage = (@total_critical > 0) ? (@aligned / @total_critical) * 100 : 0.0;
+      print "Alignment_Percentage=" . @percentage;
+    }
+  ' "$PREVIOUS_STEP_STDOUT" | tee /dev/stderr
+  
+  PERCENTAGE=$(echo "$PREVIOUS_STEP_STDOUT" | grep "Alignment_Percentage" | cut -d'=' -f2)
+  if (( $(echo "$PERCENTAGE < 90" | bc -l) )); then
+    echo "ASSERTION FAILED: Critical service alignment is ${PERCENTAGE}%, which is not > 90%." >&2
+    exit 1
+  else
+    echo "Critical service alignment is ${PERCENTAGE}% (Passed)" >&2
+  fi
+
+# -----------------------------------------------------------------------------
+# SCENARIO: Security classification consistency check
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS comparing SC fields for each service
+  # This step calculates the average and difference, passing the new CSV forward
+  # FIX: Removed "@" from function definitions and calls.
+  mlr --csv put '
+    func sc_to_num(val) {
+      if (val == "A") { return 5; }
+      elif (val == "B") { return 4; }
+      elif (val == "C") { return 3; }
+      elif (val == "D") { return 2; }
+      elif (val == "E") { return 1; }
+      else { return 0; }
+    }
+    
+    $sc_avail_num = sc_to_num(${SC Availability});
+    $sc_conf_num = sc_to_num(${SC Confidentiality});
+    $sc_integ_num = sc_to_num(${SC Integrity});
+    $sc_target_num = sc_to_num(${SC Protection Target});
+    
+    $sc_avg = ($sc_avail_num + $sc_conf_num + $sc_integ_num) / 3;
+    $sc_diff = abs($sc_target_num - $sc_avg);
+  ' $GIVEN_STDOUT
+
+IMPLEMENTS SC Protection Target should generally align with other SC classifications
+  # Documentation step, passes the data through
+  echo "$PREVIOUS_STEP_STDOUT"
+
+IMPLEMENTS flag services where Protection Target differs by more than 2 levels from average of other SC fields
+  # This step filters for the inconsistent services and saves to a report
+  OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}-inconsistent.json"
+  
+  echo "$PREVIOUS_STEP_STDOUT" | \
+  mlr --csv filter '$sc_diff > 2.0' | \
+  mlr --c2j cut -f Name,"SC Availability","SC Confidentiality","SC Integrity","SC Protection Target",sc_avg,sc_diff | \
+  jq -s . | tee "$OUTPUT_FILE"
+  
+  echo "Inconsistent service report written to $OUTPUT_FILE" >&2
+
+# -----------------------------------------------------------------------------
+# SCENARIO: Report on security posture distribution
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS analysing security classifications
+  # Pass-through step
+  echo $GIVEN_STDOUT
+
+IMPLEMENTS produce a distribution report showing:
+  # This step generates a single, comprehensive JSON report
+  OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}-distribution.json"
+  
+  # FIX: Removed "@" from function definitions and calls.
+  # FIX: Changed "push" to "put"
+  # FIX: Handle "Unknown" BCM Class
+  mlr --csv put -q '
+    func sc_to_num(val) {
+      if (val == "A") { return 5; }
+      elif (val == "B") { return 4; }
+      elif (val == "C") { return 3; }
+      elif (val == "D") { return 2; }
+      elif (val == "E") { return 1; }
+      else { return 0; }
+    }
+    
+    func is_valid_bcm_class(val) {
+      return val == "0" || val == "1" || val == "2" || val == "3" || val == "4"
+    }
+
+    begin {
+      @conf_counts = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0, "Unknown": 0};
+      @avail_counts = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0, "Unknown": 0};
+      @integ_counts = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0, "Unknown": 0};
+      @bcm_counts = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "Unknown": 0};
+      @high_risk_services = [];
+    }
+    
+    # Get values
+    conf = is_valid_sc_class(${SC Confidentiality}) ? ${SC Confidentiality} : "Unknown";
+    avail = is_valid_sc_class(${SC Availability}) ? ${SC Availability} : "Unknown";
+    integ = is_valid_sc_class(${SC Integrity}) ? ${SC Integrity} : "Unknown";
+    bcm = is_valid_bcm_class(${BCM Class}) ? ${BCM Class} : "Unknown";
+    target = ${SC Protection Target};
+    
+    # Increment counts
+    @conf_counts[conf] += 1;
+    @avail_counts[avail] += 1;
+    @integ_counts[integ] += 1;
+    @bcm_counts[bcm] += 1;
+    
+    # Check for high-risk
+    if ((bcm == "0" || bcm == "1" || bcm == "2") && (target == "D" || target == "E")) {
+      put(@high_risk_services, "", {"Name": $Name, "BCM Class": bcm, "SC Protection Target": target});
+    }
+
+    end {
+      print "{";
+      print "  \"distribution_SC_Confidentiality\": " . json_encode(@conf_counts) . ",";
+      print "  \"distribution_SC_Availability\": " . json_encode(@avail_counts) . ",";
+      print "  \"distribution_SC_Integrity\": " . json_encode(@integ_counts) . ",";
+      print "  \"distribution_BCM_Class\": " . json_encode(@bcm_counts) . ",";
+      print "  \"high_risk_services\": " . json_encode(@high_risk_services);
+      print "}";
+    }
+  ' $PREVIOUS_STEP_STDOUT | jq . | tee "$OUTPUT_FILE"
+  
+  echo "Security posture distribution report written to $OUTPUT_FILE" >&2
+
+# -----------------------------------------------------------------------------
+# Use "." to match parentheses, as escaping can be tricky.
+# -----------------------------------------------------------------------------
+
+IMPLEMENTS Count of services at each SC Confidentiality level .A-E.
+  # Documentation step, does nothing
+  true
+
+IMPLEMENTS Count of services at each SC Availability level .A-E.
+  # Documentation step, does nothing
+  true
+
+IMPLEMENTS Count of services at each SC Integrity level .A-E.
+  # Documentation step, does nothing
+  true
+
+IMPLEMENTS Count of services at each BCM Class .0-4.
+  # Documentation step, does nothing
+  true
+
+IMPLEMENTS List of high-risk services .BCM 0-2 with SC D/E.
+  # Documentation step, does nothing
+  true

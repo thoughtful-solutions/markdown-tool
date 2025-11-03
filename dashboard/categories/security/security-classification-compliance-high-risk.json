@@ -1,0 +1,19 @@
+[
+  [
+    {
+      "Name": "BANK_PARENT PRODUCT_HR_A",
+      "BCM Class": 0,
+      "SC Protection Target": "D"
+    },
+    {
+      "Name": "CR-Result report",
+      "BCM Class": 0,
+      "SC Protection Target": "D"
+    },
+    {
+      "Name": "VENDOR_SAP VENDOR_SAP Process Manager",
+      "BCM Class": 0,
+      "SC Protection Target": "D"
+    }
+  ]
+]
