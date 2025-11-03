@@ -2,53 +2,37 @@
 
 ## Description
 
-Verifies the organisation's progress towards its "cloud-first" strategy by measuring the distribution of service deployment models. This tracks the journey from on-premise infrastructure to cloud-native services, helping to achieve provider-scale efficiencies, reduce operational overhead, and support sustainability goals through reduced on-premise carbon footprint. This verification supports the **Integratable** and **Reproducible** architecture rules by tracking adoption of standardised cloud service models and identifying services that can leverage cloud-native integration patterns.
+Verifies that the organisation's cloud service portfolio aligns with the enterprise cloud-first strategy. This verification analyses the distribution of hosting models across both business and technical services, tracking progress towards the target state architecture. It identifies services that are migration candidates, measures overall cloud adoption rates, and highlights alignment with strategic technology choices. The verification provides actionable insights for architecture governance and investment planning.
 
 ## Metadata
-- **Category**: Development
+- **Category**: Operations
 - **Display Control**: Pie Chart
-- **Thresholds**:
-    - **Green**: > 60% cloud-based services (SaaS + PaaS + IaaS)
-    - **Amber**: 40% - 60% cloud-based
-    - **Red**: < 40% cloud-based
+- **Thresholds**: N/A
 - **Maturity Level**: Medium
 
 ## Features
-
 ```gherkin
-FEATURE: Cloud Service Model Distribution
+FEATURE: Cloud Strategy Alignment Monitoring
 
-  SCENARIO: Report on service deployment model distribution
-    GIVEN a service inventory from the CMDB
-    WHEN services are classified by their Operating Model
-    THEN produce a report showing counts and percentages for:
-      AND SaaS services (fully managed cloud)
-      AND PaaS services (platform cloud)
-      AND IaaS services (infrastructure cloud)
-      AND IT Services (internal, potentially hybrid)
-      AND Technical Services (infrastructure/platform)
-      AND BANK_PARENT (parent company hosted)
-      AND Undeclared (services without operating model)
-    AND calculate total cloud-based percentage (SaaS + PaaS + IaaS)
+  SCENARIO: Analyse hosting model distribution across business services
+    GIVEN a CMDB inventory of business services
+    WHEN services are grouped by their hosting model classification
+    THEN produce a count distribution report showing Cloud SaaS, Cloud PaaS/IaaS, On-Premise, and Hybrid services
 
-  SCENARIO: Track cloud adoption trend
-    GIVEN service inventory data with timestamps
-    WHEN comparing Operating Model distribution over time
-    THEN calculate the trend in cloud adoption percentage
-    AND flag if trend is declining or stagnant (< 2% improvement per quarter)
-    
-  SCENARIO: Identify cloud migration candidates
-    GIVEN a service inventory from the CMDB
-    WHEN filtering for IT Services and Technical Services without cloud operating model
-    AND cross-referencing with BCM Class (prioritise critical services)
-    THEN produce a prioritised list of services for cloud migration assessment
-    AND group by responsible person for action planning
+  SCENARIO: Analyse hosting model distribution across technical services
+    GIVEN a CMDB inventory of technical services
+    WHEN services are grouped by their hosting model classification
+    THEN produce a count distribution report showing Cloud SaaS, Cloud PaaS/IaaS, On-Premise, and Hybrid services
 
-  SCENARIO: Validate operating model declarations
-    GIVEN a service inventory from the CMDB
-    WHEN checking services declared as SaaS
-    THEN verify service names contain known SaaS vendor names (VENDOR_*)
-    AND flag services declared as SaaS but appear to be internal products
-    AND verify consistency of operating model within service families
+  SCENARIO: Identify on-premise migration candidates
+    GIVEN a combined inventory of all services
+    WHEN services with hosting model "On-Premise" or "Hybrid" are filtered
+    AND services are sorted by business criticality
+    THEN produce a prioritised migration candidate list with service names and current hosting status
+
+  SCENARIO: Calculate overall cloud adoption percentage
+    GIVEN a complete inventory of all services
+    WHEN cloud-hosted services are counted
+    AND the percentage of services running in the cloud is calculated
+    THEN produce a cloud adoption score with threshold status
 ```
-
