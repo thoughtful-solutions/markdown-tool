@@ -12,6 +12,7 @@ established_links:
   - ../verification/security-classification-compliance.md
   - ../verification/service-catalogue-completeness.md
   - ../verification/service-ownership-governance.md
+  - ../verification/cloud-strategy-alignment.md
   reproducible.md:
   - ../principles/resiliency.md
   - ../principles/agility.md
@@ -19,6 +20,7 @@ established_links:
   - ../verification/cloud-alignment.md
   - ../verification/pam-compliance.md
   - ../verification/security-classification-compliance.md
+  - ../verification/cloud-strategy-alignment.md
   securable.md:
   - ../principles/resiliency.md
   - ../principles/supportability.md
@@ -27,6 +29,7 @@ established_links:
   - ../verification/pam-compliance.md
   - ../verification/security-classification-compliance.md
   - ../verification/service-ownership-governance.md
+  - ../verification/cloud-strategy-alignment.md
   integratable.md:
   - ../principles/agility.md
   - ../principles/supportability.md
@@ -36,3 +39,4 @@ established_links:
   - ../verification/pam-compliance.md
   - ../verification/service-catalogue-completeness.md
   - ../verification/service-ownership-governance.md
+  - ../verification/cloud-strategy-alignment.md

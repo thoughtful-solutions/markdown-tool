@@ -24,3 +24,8 @@ established_links:
   - ../rules/discoverable.md
   - ../rules/securable.md
   - ../rules/integratable.md
+  cloud-strategy-alignment.md:
+  - ../rules/reproducible.md
+  - ../rules/securable.md
+  - ../rules/integratable.md
+  - ../rules/discoverable.md
