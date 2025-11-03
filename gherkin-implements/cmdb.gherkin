@@ -1,0 +1,272 @@
+# This step provides the file path for the business services inventory.
+# Its output (the path) is stored in GIVEN_STDOUT.
+IMPLEMENTS a CMDB inventory of business services
+  echo "../dashboard/data/cmdb/business_services_dev_final.csv"
+
+# -----------------------------------------------------------------------------
+
+# This step provides the file path for the technical services inventory.
+IMPLEMENTS a CMDB inventory of technical services
+  echo "../dashboard/data/cmdb/technical_services_dev_final.csv"
+
+# -----------------------------------------------------------------------------
+
+# This single implementation provides the paths for *both* CSV files.
+IMPLEMENTS a (combined|complete) inventory of all services
+  echo "../dashboard/data/cmdb/business_services_dev_final.csv ../dashboard/data/cmdb/technical_services_dev_final.csv"
+
+# -----------------------------------------------------------------------------
+
+# This step applies the classification logic for a single file.
+IMPLEMENTS services are grouped by their hosting model classification
+  mlr --csv put '
+    if (${Operating Model} == "SaaS") {
+      $HostingModel = "Cloud SaaS"
+    }
+    elif (${Operating Model} == "IT Service-Cloud") {
+      $HostingModel = "Cloud PaaS/IaaS"
+    }
+    elif (${Operating Model} == "BANK_PARENT") {
+      $HostingModel = "Hybrid"
+    }
+    elif (${Operating Model} == "IT Service") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "IT Service-ITMA") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "IT Service-BMA") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "IT Service-VENDOR_SAP") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "Technical Service") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "Non IT") {
+      $HostingModel = "On-Premise"
+    }
+    else {
+      $HostingModel = "On-Premise"
+    }
+  ' "$GIVEN_STDOUT"
+
+# -----------------------------------------------------------------------------
+
+# This step produces the JSON for the first two scenarios.
+IMPLEMENTS produce a count distribution report showing Cloud SaaS, Cloud PaaS/IaaS, On-Premise, and Hybrid services
+  
+  # Default output file is for the main pie chart (business services)
+  OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}-business.json"
+  
+  # If it's the technical services file, change the output name
+  if echo "$GIVEN_STDOUT" | grep -q "technical_services"; then
+    OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}-technical.json"
+  fi
+
+  echo "$PREVIOUS_STEP_STDOUT" | \
+  mlr --c2j count -g HostingModel then \
+  rename HostingModel,model | \
+  jq -s . | tee "$OUTPUT_FILE"
+  
+  echo "Dashboard data written to $OUTPUT_FILE" >&2
+
+# -----------------------------------------------------------------------------
+
+# This step classifies and then filters for on-prem/hybrid.
+IMPLEMENTS services with hosting model "On-Premise" or "Hybrid" are filtered
+  FILE_PATHS=$(echo "$GIVEN_STDOUT" | xargs)
+  mlr --csv put '
+    if (${Operating Model} == "SaaS") {
+      $HostingModel = "Cloud SaaS"
+    }
+    elif (${Operating Model} == "IT Service-Cloud") {
+      $HostingModel = "Cloud PaaS/IaaS"
+    }
+    elif (${Operating Model} == "BANK_PARENT") {
+      $HostingModel = "Hybrid"
+    }
+    elif (${Operating Model} == "IT Service") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "IT Service-ITMA") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "IT Service-BMA") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "IT Service-VENDOR_SAP") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "Technical Service") {
+      $HostingModel = "On-Premise"
+    }
+    elif (${Operating Model} == "Non IT") {
+      $HostingModel = "On-Premise"
+    }
+    else {
+      $HostingModel = "On-Premise"
+    }
+  ' then \
+  filter '$HostingModel == "On-Premise" || $HostingModel == "Hybrid"' \
+  $FILE_PATHS
+
+# -----------------------------------------------------------------------------
+
+# This step sorts the filtered list by BCM Class.
+IMPLEMENTS AND services are sorted by business criticality
+  echo "$PREVIOUS_STEP_STDOUT" | \
+  mlr --csv sort -n "BCM Class"
+
+# -----------------------------------------------------------------------------
+
+# This step creates the JSON for the migration candidate list.
+IMPLEMENTS THEN produce a prioritised migration candidate list with service names and current hosting status
+  OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}-migration.json"
+  echo "$PREVIOUS_STEP_STDOUT" | \
+  mlr --c2j cut -f Name,"BCM Class",HostingModel | \
+  jq -s . | tee "$OUTPUT_FILE"
+  echo "Migration candidate list written to $OUTPUT_FILE" >&2
+
+# -----------------------------------------------------------------------------
+
+# *** THIS IS THE FIX ***
+# The two mlr commands are wrapped in ( ... ) so their
+# combined output is piped as a single stream to the final mlr count.
+IMPLEMENTS cloud-hosted services are counted
+  FILE_PATHS=($GIVEN_STDOUT)
+  BUSINESS_SVC_FILE=${FILE_PATHS[0]}
+  TECHNICAL_SVC_FILE=${FILE_PATHS[1]}
+
+  (
+    # Process Business Services
+    mlr --csv put '
+      if (${Operating Model} == "SaaS") {
+        $HostingModel = "Cloud SaaS"
+      }
+      elif (${Operating Model} == "IT Service-Cloud") {
+        $HostingModel = "Cloud PaaS/IaaS"
+      }
+      elif (${Operating Model} == "BANK_PARENT") {
+        $HostingModel = "Hybrid"
+      }
+      elif (${Operating Model} == "IT Service") {
+        $HostingModel = "On-Premise"
+      }
+      elif (${Operating Model} == "IT Service-ITMA") {
+        $HostingModel = "On-Premise"
+      }
+      elif (${Operating Model} == "IT Service-BMA") {
+        $HostingModel = "On-Premise"
+      }
+      elif (${Operating Model} == "IT Service-VENDOR_SAP") {
+        $HostingModel = "On-Premise"
+      }
+      elif (${Operating Model} == "Non IT") {
+        $HostingModel = "On-Premise"
+      }
+      else {
+        $HostingModel = "On-Premise"
+      }
+      $ServiceType = "Business"
+    ' "$BUSINESS_SVC_FILE"
+
+    # Process Technical Services
+    mlr --csv put '
+      if (${Operating Model} == "SaaS") {
+        $HostingModel = "Cloud SaaS"
+      }
+      elif (${Operating Model} == "IT Service-Cloud") {
+        $HostingModel = "Cloud PaaS/IaaS"
+      }
+      elif (${Operating Model} == "BANK_PARENT") {
+        $HostingModel = "Hybrid"
+      }
+      elif (${Operating Model} == "IT Service") {
+        $HostingModel = "On-Premise"
+      }
+      elif (${Operating Model} == "Technical Service") {
+        $HostingModel = "On-Premise"
+      }
+      else {
+        $HostingModel = "On-Premise"
+      }
+      $ServiceType = "Technical"
+    ' "$TECHNICAL_SVC_FILE"
+  
+  ) | mlr --csv count -g ServiceType,HostingModel
+
+# -----------------------------------------------------------------------------
+
+# This step calculates the cloud percentage.
+IMPLEMENTS AND the percentage of services running in the cloud is calculated
+  echo "$PREVIOUS_STEP_STDOUT" | \
+  mlr --csv put -q '
+    begin {
+      @business_cloud = 0; @business_total = 0;
+      @technical_cloud = 0; @technical_total = 0;
+    }
+    
+    if (NR > 1) {
+      if ($ServiceType == "Business") {
+        if ($HostingModel == "Cloud SaaS" || $HostingModel == "Cloud PaaS/IaaS") {
+          @business_cloud += $count;
+        }
+        @business_total += $count;
+      }
+      elif ($ServiceType == "Technical") {
+        if ($HostingModel == "Cloud SaaS" || $HostingModel == "Cloud PaaS/IaaS") {
+          @technical_cloud += $count;
+        }
+        @technical_total += $count;
+      }
+    }
+    
+    end {
+      # Calculate percentages
+      @bus_pct = (@business_total > 0) ? (@business_cloud / @business_total) * 100 : 0.0;
+      @tech_pct = (@technical_total > 0) ? (@technical_cloud / @technical_total) * 100 : 0.0;
+  
+      # Print a single JSON object with nested structures
+      print "{";
+      print "  \"business_services\": {";
+      print "    \"cloud_total\": " . @business_cloud . ",";
+      print "    \"grand_total\": " . @business_total . ",";
+      print "    \"percentage\": " . fmtnum(@bus_pct, "%.2f");
+      print "  },";
+      print "  \"technical_services\": {";
+      print "    \"cloud_total\": " . @technical_cloud . ",";
+      print "    \"grand_total\": " . @technical_total . ",";
+      print "    \"percentage\": " . fmtnum(@tech_pct, "%.2f");
+      print "  }";
+      print "}";
+    }
+  '
+
+# -----------------------------------------------------------------------------
+
+# This step creates the final score JSON.
+IMPLEMENTS THEN produce a cloud adoption score with threshold status
+  OUTPUT_FILE="${CATEGORY_DIR}/${VFILENAME}-score.json"
+  JSON_DATA=$(echo "$PREVIOUS_STEP_STDOUT")
+  
+  echo "$JSON_DATA" | jq '
+    # Define a helper function to add the status fields
+    def add_status:
+      . + {
+        "status": (
+          if .percentage >= 60 then "Green"
+          elif .percentage >= 40 then "Amber"
+          else "Red"
+          end
+        ),
+        "value": (.percentage | tostring + "%")
+      };
+
+    # Apply the function to both objects
+    .business_services |= add_status |
+    .technical_services |= add_status
+  ' | tee "$OUTPUT_FILE"
+  
+  echo "Adoption score data written to $OUTPUT_FILE" >&2

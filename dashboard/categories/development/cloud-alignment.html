@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Model Classification</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; color: #333; }
+        #chartContainer { position: relative; height: 500px; margin-top: 20px; }
+        .error-message { color: #D8000C; background-color: #FFD2D2; border: 1px solid #D8000C; padding: 15px; border-radius: 5px; text-align: left; }
+        .error-message h2 { margin-top: 0; }
+        .error-message code { background-color: #FFF; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Service Model Classification</h1>
+    <div id="chartContainer">
+        <canvas id="myChart"></canvas>
+    </div>
+    
+    <script>
+        fetch('cloud-alignment.json')
+            .then(response => {
+                // Check if the response is ok (status 200-299)
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Assumes data is like: [{ "model": "SaaS", "count": 4 }, ...]
+                const labels = data.map(item => item.model);
+                const values = data.map(item => item.count);
+                
+                // Dynamic color generation
+                const backgroundColors = values.map((_, i) => `hsl(${i * 360 / values.length}, 70%, 60%)`);
+                
+                const ctx = document.getElementById('myChart');
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Count',
+                            data: values,
+                            backgroundColor: backgroundColors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': ' + context.parsed;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                let errorMessage = `
+                    <div class="error-message">
+                        <h2>Error Loading Chart Data</h2>
+                        <p>Could not fetch or parse data from <code>cloud-alignment.json</code>.</p>
+                        <p><strong>Possible Reason:</strong></p>`;
+                
+                if (error instanceof SyntaxError && error.message.includes("Unexpected token")) {
+                    errorMessage += `<p>The file was found, but it is not valid JSON. This often happens if the file is missing and a 404 HTML page was returned instead.</p>`;
+                } else if (error.message.includes("Network response was not ok")) {
+                    errorMessage += `<p>The data file <code>cloud-alignment.json</code> could not be found (e.g., 404 Not Found).</p>`;
+                } else {
+                    errorMessage += `<p>An unexpected error occurred: ${error.message}</p>`;
+                }
+                
+                errorMessage += `<p>Please ensure the JSON file exists in the same directory as this HTML file and contains valid data.</p></div>`;
+                document.getElementById('chartContainer').innerHTML = errorMessage;
+            });
+    </script>
+</body>
+</html>

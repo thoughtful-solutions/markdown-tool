@@ -1,0 +1,1264 @@
+[
+  [
+    {
+      "Name": "BANK_PARENT PRODUCT_HR_A",
+      "BCM Class": 0,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT Jobs",
+      "BCM Class": 0,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "CR-Result report",
+      "BCM Class": 0,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "File storage",
+      "BCM Class": 0,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP VENDOR_SAP Process Manager",
+      "BCM Class": 0,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "SharePoint GPR-Portal",
+      "BCM Class": 0,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Active Directory",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Datensicherung & Wiederherstellung",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "ImmoRisk Datenbank",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Internet Browser",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "IT Firewall Services",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Kopier-Druck-Systeme (VENDOR_AR)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Lecare",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Managed Server",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_J",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT Office Project",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT Office Visio",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_W Fernzugang Service",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Netzwerk",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Notebook / PC Service",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_K ITSM",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Payments",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Privileged Access Management (PAM)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP CR MOVE",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP FI/CO/AA",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP PO",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP xFlow",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Veröffentlichungstool",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VPN Fernzugang",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Active Directory (MS)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Adressprüfung (VENDOR_R)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Backup & Recovery",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_CITRIX Application Delivery Controller (ADC)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_CITRIX Storefront",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_CYBERARK Cloud Platform",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Datenbanken",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "DNS external",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Firewall - DMZ",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Firewall - Internet of Things (IoT)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Firewall - Management",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Firewall - Verbindung in Geschäftsstellen",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Firewall internal",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Firewall Internet",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Internet Access",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "LAN",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_J Platform (DMS,WF)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Authentication and Sync Services",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Entra ID (former VENDOR_MICROSOFT Active Directory)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT VENDOR_KUBERNETES Service",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "NTP (Netzwerk Time Server)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_K Platform",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_L",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Printserver",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Proxy",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "proxy.pac",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Rechenzentrum CITY_C",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Rechenzentrum CITY_B",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_Z",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "SAN",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP ASCAVO.PPM",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Server-Mgmt-LAN",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "SQL Server Reporting Services (SSRS)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Storage",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_U VENDOR_U Authentication Service (SAS)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Virtualisierung (VENDOR_VMWARE)",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "WAN",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Webserver",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "WLAN",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Zertifikat Service external",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Zertifikat Service internal",
+      "BCM Class": 3,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "PRODUCT_REPORTING_A 360",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_SHARE_A",
+      "BCM Class": 4,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_ACCESS_A",
+      "BCM Class": 4,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT VENDOR_AN",
+      "BCM Class": 4,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_KYC_A",
+      "BCM Class": 4,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_FINANCE_A",
+      "BCM Class": 4,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_AUDIT_A",
+      "BCM Class": 4,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_CONTROL_A",
+      "BCM Class": 4,
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "VENDOR_CITRIX (Desktop Services & Special applications)",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "PRODUCT_INVEST_A",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "COMPANY_MAIN Institutional Portal (PRODUCT_PORTAL_A)",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "PRODUCT_MIS_A",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "PRODUCT_MASTER_B",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "E-Mail",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_Y Single Sign On (SSO)",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Facility Management",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "IDL Konsis",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "IDM",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Innosys",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "IT EndPoint Security Management",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Marabu (nur lesend)",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT Office 365",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Monitoring",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "MS SQL reporting Services",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_K ISMS",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Rechnungsmanager/ Rechnungsversand",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Risk Information Center (Radar Services)",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "RMDB",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "SAM – Supplier Analytics Management",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Autobank",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Baukostenmanagement",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Business Warehouse",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP CU Contract",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP MM",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP PM",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP PS",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP RE-FX (Real Estate)",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP VENDOR_SAP Process Governance",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP TRM",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "SharePoint EUC Inventar",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_AI",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Smartphone / Tablet  Service",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Stotax",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "SuperFonds Datenbank",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Systeme for the Angriffserkennung",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_AN",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_AC Testsuite",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_O Secure Track",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_CITRIX data Delivery Controller",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_CITRIX STD-Desktop",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "PRODUCT_MIS_A Platform",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_DELL OME",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "E-Mail Archive",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Fileservice",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "GPR-SharePoint Platform",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Malware Security Endpoints",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Malware Security Server",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT Exchange Online/OnPrem",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Mobilfunk",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Passwort Reset",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Radar Services - NIDS",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Radar Services - SIEM",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Radar Services - VAS",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Business Warehouse Netweaver",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP S/4 HANA Platform",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Security Analytics Services",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Security Control Center",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Softwareverteilung / Patchmanagement",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "XDR",
+      "BCM Class": 4,
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_F (Digital Asset Management)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "PRODUCT_ASSET_A",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_WHISTLE_A (Whistleblowing Tool)",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_MASTER_A",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_RATING_A R-CORP (Rating System)",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT VENDOR_DOCUSIGN",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_RISK_A",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_OPRISK_A (PRODUCT_OPRISK_A Suite)",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_PLANNING_A (Planning System)",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT Rating-Datenpool (PRODUCT_RATING_B)",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_REP_A",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_COST_A",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "BANK_PARENT Treasury Management",
+      "BCM Class": "",
+      "HostingModel": "Hybrid"
+    },
+    {
+      "Name": "Code-on-Demand",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "PRODUCT_CHAT_A (CR-Chatbots)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "PRODUCT_DOC_A",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Digi Seal",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Fax",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "GOA FX",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Identity Change",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Identity Lifecycle Management",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Identity Mover",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Identity Renewal",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "ITM (Integrated Treasury Manager)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Meetingräume",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Meise",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Mobilienleasing-Portal",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Offboarding",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Onboarding",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "ppa-scraper",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Robotic Process Automation (RPA)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Safe",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP BC inkl. VENDOR_SAP GUI",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Service Desk",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "SharePoint Online",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Sitecore XMCloud (Content Management System)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "SteuerBA",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Telefonie",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Think-Cell",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VR-Brille",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Active Directory",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_Q",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Authentifizierung (VENDOR_S)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_T DS View",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "BANK_PARENT PRODUCT_AUDIT_A (Revision)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_CISCO Jabber (CTI-Client)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "DHCP",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "DNS",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "EndPoint Security (AntiVirus) Management",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Exchange Web Tools",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Filetransfer (SFTP)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "FIM-Platform",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "HSM (Hardware Sicherheitsmodul)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_I VENDOR_MICROSOFT Backup",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Lizenzmanagement",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Advisor Service",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Cloud Automation",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Container Apps",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Container Registry",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Cost Management Service",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Key Vault",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Log Analytics Workspace",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Log Analytics Workspace",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Logic App",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Monitoring",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT MySQL",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Network",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT OpenAI Services",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT PostgreSQL",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Power Platform",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT VENDOR_MICROSOFT Storage Account",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT Endpoint Manager",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_MICROSOFT Fabric",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Mobile Device Management",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "MS Azrue Storage Account",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "MS OS_WINDOWS Client",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Network Detection and Response",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "NOC Platform",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_X Cloud Connect",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_X Storage",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_X VENDOR_VMWARE Private Cloud",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "OVHcloud",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_M CVI (Cloud Video Interop)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Public Key Infrastructure (PKI)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Reporting Server",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_N",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Business Technology Platform",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Business Technology Platform (BTP)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Business Warehouse Netweaver Testsysteme",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP CloudALM",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Enterprise Threat Detection (ETD)",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Netweaver PC1",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Netweaver PC2",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP Netweaver Testsysteme",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SAP S/4 HANA Platform Testsysteme",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SOPHOS",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SOPHOS Central",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SOPHOS Endpoint Protection",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SOPHOS Extended Detection and Response",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SOPHOS Managed Risk",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_SOPHOS Server Protection",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_U SafenNet SAAS - 2FA",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "VENDOR_VEEAM Backup & Replication",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Video Streaming",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Videoüberwachung",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Vulnerability Management",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Vulnerability Scan",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Web Proxy",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "OS_WINDOWS Server",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "Zertifikate external",
+      "BCM Class": "",
+      "HostingModel": "On-Premise"
+    },
+    {
+      "Name": "",
+      "BCM Class": "E",
+      "HostingModel": "On-Premise"
+    }
+  ]
+]

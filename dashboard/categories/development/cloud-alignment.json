@@ -1,0 +1,18 @@
+[
+  {
+    "model": "SaaS",
+    "count": 4
+  },
+  {
+    "model": "PaaS/IaaS",
+    "count": 0
+  },
+  {
+    "model": "Local",
+    "count": 1
+  },
+  {
+    "model": "Unclassified (Users/Groups)",
+    "count": 17
+  }
+]

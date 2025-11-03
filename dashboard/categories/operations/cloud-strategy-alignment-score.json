@@ -1,0 +1,16 @@
+{
+  "business_services": {
+    "cloud_total": 8,
+    "grand_total": 125,
+    "percentage": 6.40,
+    "status": "Red",
+    "value": "6.40%"
+  },
+  "technical_services": {
+    "cloud_total": 1,
+    "grand_total": 136,
+    "percentage": 0.74,
+    "status": "Red",
+    "value": "0.74%"
+  }
+}

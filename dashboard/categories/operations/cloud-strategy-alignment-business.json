@@ -1,0 +1,20 @@
+[
+  [
+    {
+      "model": "Cloud SaaS",
+      "count": 31
+    },
+    {
+      "model": "On-Premise",
+      "count": 97
+    },
+    {
+      "model": "Hybrid",
+      "count": 20
+    },
+    {
+      "model": "Cloud PaaS/IaaS",
+      "count": 8
+    }
+  ]
+]
