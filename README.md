@@ -1,302 +1,137 @@
-# Markdown Validator CLI
+## Project Overview: Enterprise Architecture Documentation & Governance System
 
-A Python CLI tool for Markdown document validation and management. Validates document structure against specifications and ensures link integrity across your markdown project.
+This project is a comprehensive **Enterprise Architecture (EA) documentation and governance system** 
+built using Python CLI tools. It creates a structured, validated, and measurable framework for managing 
+enterprise architecture artefacts with automated compliance checking and dashboard generation.
 
-## Why Use This Tool?
+## What It Does
 
-When managing large documentation projects or knowledge bases with multiple interconnected markdown files, maintaining consistency and link integrity becomes challenging:
+### Core Functionality
 
-- **Structural consistency**: Ensures all documents follow the same format (e.g., all API docs have the same sections in the same order)
-- **Link rot prevention**: Detects broken links before they reach production
-- **Bidirectional relationships**: Identifies one-way links that should be bidirectional (e.g., related documents that reference each other)
-- **Automated validation**: Integrates into CI/CD pipelines to catch issues during development
-- **Documentation quality**: Enforces documentation standards across teams and contributors
+1. **Documentation Structure Enforcement**
+   - Validates markdown documents against defined specifications (using `spec.yaml` files)
+   - Ensures all architecture documents follow consistent structure and formatting
+   - Enforces required sections, heading levels, and content patterns
 
-This tool provides automated enforcement of documentation standards, preventing common issues like missing sections, broken links, and inconsistent document structure.
+2. **Relationship Management**
+   - Tracks and validates hyperlinks between related architecture documents
+   - Ensures bidirectional relationships where appropriate
+   - Prevents broken links and maintains document traceability
 
-## Configuration Files
+3. **Automated Verification & Testing**
+   - Executes Gherkin-based scenarios embedded in verification documents
+   - Runs shell scripts to validate actual system state against architecture requirements
+   - Generates test results and compliance metrics
 
-### spec.yaml - Document Structure Specification
+4. **Dashboard Generation**
+   - Creates static HTML dashboards with visual charts (pie charts, traffic lights, temperature bars)
+   - Aggregates verification results into category-based views
+   - Provides real-time visibility of architecture compliance
 
-The `spec.yaml` file defines the expected structure of your markdown documents. It specifies sequences of markdown elements that documents must contain.
+### Architecture Taxonomy
 
-#### Structure
+The system organises enterprise architecture into four key layers:
 
-```yaml
-structure:
-  - sequence:
-      - type: heading_open
-        level: 1
-        content_regex: ".*"
-      - type: paragraph_open
-    min_occurrences: 1
-    max_occurrences: 1
-    error_level: FATAL
-    
-  - sequence:
-      - type: heading_open
-        level: 2
-      - type: fence
-        info: python
-    min_occurrences: 0
-    max_occurrences: null
-    error_level: WARN
-```
+1. **Domains** - Core architecture areas:
+   - Business Architecture
+   - Application Architecture  
+   - Data Architecture
+   - Technology Architecture
 
-#### Fields Explained
+2. **Principles** - Strategic guidelines:
+   - Sustainability, Resiliency, Agility
+   - Business Alignment, Supportability, Interoperability
 
-**Block-level fields:**
-- `sequence`: Array of element steps that must appear in order
-- `min_occurrences`: Minimum times this block must appear (default: 1)
-- `max_occurrences`: Maximum times this block can appear (null = unlimited)
-- `error_level`: Severity level - `FATAL`, `WARN`, or `INFO`
+3. **Rules** - Enforceable standards:
+   - Discoverable, Integratable, Reproducible, Securable
 
-**Sequence step fields:**
-- `type`: Token type from markdown-it parser:
-  - `heading_open`: Heading element
-  - `paragraph_open`: Paragraph element
-  - `fence`: Code block
-  - `list_item_open`: List item
-  - `inline`: Inline content (used internally)
-- `level`: (Optional) For headings, specifies H1-H6 (1-6)
-- `info`: (Optional) For code blocks, specifies language (e.g., `python`, `javascript`)
-- `content_regex`: (Optional) Regex pattern that content must fully match
+4. **Verification** - Measurable compliance checks:
+   - Identity Lifecycle Management
+   - Privilege Governance
+   - Cloud Alignment
+   - Service Inventory
 
-#### Example Use Cases
+## Why It Exists
 
-**Enforce standard document template:**
-```yaml
-structure:
-  # Every document must start with H1 title
-  - sequence:
-      - type: heading_open
-        level: 1
-    min_occurrences: 1
-    max_occurrences: 1
-    error_level: FATAL
-  
-  # Must have a "Description" section
-  - sequence:
-      - type: heading_open
-        level: 2
-        content_regex: "Description"
-      - type: paragraph_open
-    min_occurrences: 1
-    max_occurrences: 1
-    error_level: FATAL
-  
-  # Can have multiple example code blocks
-  - sequence:
-      - type: heading_open
-        level: 2
-        content_regex: "Example.*"
-      - type: fence
-        info: python
-    min_occurrences: 0
-    max_occurrences: null
-    error_level: WARN
-```
+### Business Drivers
 
-### links.yaml - Link Integrity Specification
+1. **Consistency at Scale**
+   - Large enterprises struggle to maintain consistent documentation across teams
+   - Manual review processes don't scale and lead to drift
+   - This system enforces standards automatically
 
-The `links.yaml` file manages link relationships between markdown files. It defines which links are allowed and tracks established connections between documents.
+2. **Traceability & Governance**
+   - Regulatory compliance requires demonstrable controls
+   - Architecture decisions must link to business strategy
+   - The system creates an audit trail from principles to implementation
 
-#### Structure
+3. **Continuous Compliance**
+   - Traditional architecture reviews are periodic and retrospective
+   - This system enables continuous validation against live systems
+   - Real-time dashboards show compliance status
 
-```yaml
-allowed_targets:
-  - directory: "../docs"
-    filename_regex: ".*\\.md"
-  - directory: "."
-    filename_regex: "README\\.md"
+4. **Knowledge Management**
+   - Architecture knowledge is often siloed or lost when people leave
+   - Structured documentation with enforced relationships preserves institutional knowledge
+   - Self-describing, discoverable architecture assets
 
-established_links:
-  document1.md:
-    - document2.md
-    - ../docs/api.md
-  document2.md:
-    - document1.md
+### Technical Benefits
 
-required_links:
-  document1.md:
-    - document2.md
-```
+1. **Static Generation**
+   - No runtime dependencies for viewing documentation
+   - Can be hosted on simple web servers or SharePoint
+   - Version controlled in Git for collaboration
 
-#### Fields Explained
+2. **Extensible Framework**
+   - New verification scenarios can be added without changing core tools
+   - Custom display controls for different metrics
+   - Shell script implementations allow integration with any system
 
-**`allowed_targets`**: Defines which directories and files are valid link targets
-- `directory`: Relative path to allowed directory
-- `filename_regex`: Regex pattern matching allowed filenames
+3. **DevOps Integration**
+   - CLI tools integrate with CI/CD pipelines
+   - Automated validation on every commit
+   - Fail builds when architecture standards are violated
 
-**`established_links`**: Maps source files to their target links
-- Key: Source markdown filename
-- Value: Array of relative paths to target files
-- Used to verify bidirectional relationships and file existence
+## Key Components Explained
 
-**`required_links`**: (Optional) Specifies links that must exist in certain files
-- Key: Markdown filename
-- Value: Array of links that must be present in that file
+### 1. **md_validator.py** - The Document Police
+   - Validates markdown structure against `spec.yaml` specifications
+   - Manages bidirectional links via `links.yaml` files
+   - Provides CRUD operations for markdown files
+   - Returns different exit codes for CI/CD integration
 
-#### Example Use Cases
+### 2. **gherkin-runner.py** - The Compliance Executor
+   - Extracts Gherkin scenarios from verification documents
+   - Maps steps to shell script implementations
+   - Passes context between steps (e.g., `GIVEN_STDOUT`)
+   - Generates JSON output for dashboard consumption
 
-**Restrict cross-references to specific directories:**
-```yaml
-allowed_targets:
-  # Can only link to markdown files in current directory
-  - directory: "."
-    filename_regex: ".*\\.md"
-  # Can link to API docs
-  - directory: "../api"
-    filename_regex: ".*\\.md"
-  # Can link to specific guide files
-  - directory: "../guides"
-    filename_regex: "(getting-started|advanced)\\.md"
-```
+### 3. **build_chart.py** - The Visualiser
+   - Parses verification files to extract metadata
+   - Generates appropriate HTML visualisations based on display control type
+   - Creates category-organised dashboard structure
 
-**Track bidirectional relationships:**
-```yaml
-established_links:
-  overview.md:
-    - details.md
-  details.md:
-    - overview.md  # Reverse link creates bidirectional relationship
-```
+### 4. **Implementation Scripts** - The System Inspectors
+   - Shell scripts in `gherkin-implements/` that query real systems
+   - Example: `service-inventory.gherkin` queries Entra ID (Azure AD) data
+   - Transform system data into dashboard-ready JSON
 
-If `details.md` doesn't link back to `overview.md`, the validator will report a unidirectional link error.
+## Use Case Example
 
-**Enforce required links:**
-```yaml
-required_links:
-  README.md:
-    - LICENSE.md
-    - CONTRIBUTING.md
-```
+Consider the **Identity Lifecycle Management** verification:
 
-Ensures your README always includes links to license and contribution guidelines.
+1. A markdown file defines the verification with Gherkin scenarios
+2. The scenario checks if departed employees have access revoked within 24 hours
+3. Shell scripts query the actual Entra ID system
+4. Results are validated against defined thresholds (Green >99.5%, Amber 98-99.5%, Red <98%)
+5. A traffic light dashboard shows current compliance status
+6. Links connect this verification to related rules and principles
 
-#### Multiple links.yaml Files
+This creates a complete chain from business principle → architectural rule → technical verification → operational dashboard.
 
-You can have `links.yaml` files in multiple directories. The validator will:
-1. Start with the root `links.yaml`
-2. Scan all directories listed in `allowed_targets`
-3. Build a complete link graph from all `links.yaml` files found
-4. Validate relationships across the entire project
+## Summary
 
-## What is Validated
-
-### Document Structure (`verify-doc`)
-
-The tool validates markdown document structure against a `spec.yaml` specification file:
-
-- **Element sequences**: Ensures documents follow a specific order of markdown elements (headings, paragraphs, code blocks, list items, etc.)
-- **Heading levels**: Validates heading hierarchy (H1, H2, H3, etc.)
-- **Code block languages**: Checks that code fences use expected language identifiers
-- **Content patterns**: Validates content against regex patterns (e.g., ensuring a heading contains specific text)
-- **Occurrence constraints**: Enforces minimum and maximum occurrences of document blocks
-- **Error levels**: Supports FATAL, WARN, and INFO severity levels for different validation rules
-
-### Hyperlink Integrity (`verify-link`)
-
-The tool validates links defined in `links.yaml` files:
-
-- **Allowed targets**: Ensures links only point to permitted directories/files based on regex rules
-- **File existence**: Verifies that all linked files actually exist on disk
-- **Bidirectional links**: Checks whether target files link back to source files (detecting one-way links)
-- **Link graph analysis**: Builds a complete graph of all links across the project for relationship analysis
-
-## How Validation Works
-
-### Structure Validation Process
-
-1. **Parse markdown**: Uses `markdown-it-py` to convert markdown into a token stream
-2. **Load spec**: Reads `spec.yaml` from the target directory defining expected structure
-3. **Sequential matching**: Steps through tokens matching against the sequence of elements defined in each block
-4. **Occurrence tracking**: Counts how many times each block appears and validates against min/max constraints
-5. **Error reporting**: Reports specific line numbers and describes what was expected vs. what was found
-
-### Link Validation Process
-
-1. **Load links.yaml**: Reads link specifications from the project directory
-2. **Build link graph**: Scans all `links.yaml` files in allowed directories to build a complete relationship map
-3. **Run checks**: For each link defined in `established_links`:
-   - Validates against `allowed_targets` rules
-   - Verifies file existence
-   - Checks for reverse link in target's `links.yaml`
-4. **Report results**: Provides summary view with unidirectional link counts or verbose multi-check details
-
-## CLI Options
-
-### Global Flags
-
-```bash
---verbose    Enable detailed output for debugging
---quiet      Suppress non-error messages (only show errors)
-```
-
-### Commands
-
-#### File Management
-
-**`create <filename>`**
-```bash
-md_validator.py create my_document.md
-```
-Creates a new markdown file with a basic template.
-
-**`read <filename>`**
-```bash
-md_validator.py read my_document.md
-```
-Displays the contents of a markdown file.
-
-**`update <filename> <section_name> <content>`**
-```bash
-md_validator.py update my_document.md "Introduction" "New content here"
-```
-Updates a section in a markdown file (placeholder implementation).
-
-**`delete <filename>`**
-```bash
-md_validator.py delete my_document.md
-```
-Deletes a markdown file.
-
-#### Validation Commands
-
-**`verify-doc [directory]`**
-```bash
-md_validator.py verify-doc .
-md_validator.py --verbose verify-doc ./docs
-```
-Validates all markdown files in the specified directory (defaults to current directory) against `spec.yaml`.
-
-**Exit codes:**
-- `0`: All files valid
-- `1`: Warnings found
-- `2`: Fatal errors found
-
-**`verify-link [directory]`**
-```bash
-md_validator.py verify-link .
-md_validator.py --verbose verify-link ./docs
-```
-Validates established links in the `links.yaml` file from the specified directory (defaults to current directory).
-
-**Exit codes:**
-- `0`: All links valid
-- `1`: Link errors found (broken, disallowed, or unidirectional)
-- `16`: System error (missing links.yaml, parse errors)
-
-**Default output** shows a summary table:
-```
-Link Summary (Uni-TO | Total-TO <-> Total-FROM | Uni-FROM):
-  [2] [5] document1.md [3] [1]
-```
-
-**Verbose output** (`--verbose`) shows detailed validation results for each link including all three checks (allowed target, file existence, bidirectional link).
-
-## Requirements
-
-- Python 3.7+
-- `markdown-it-py`: `pip install markdown-it-py`
-- `PyYAML`: `pip install pyyaml`
+This is a sophisticated **architecture governance platform** that bridges the gap between documentation and reality. 
+It transforms static architecture documents into a living, validated, and measurable system that provides continuous 
+assurance that the implemented technology aligns with strategic intent. The use of standard formats (Markdown, YAML, Gherkin) 
+and static generation makes it accessible whilst the automated validation ensures rigour at scale.
