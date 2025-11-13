@@ -1,82 +1,163 @@
-# Gherkin 
 
-## Preface: Gherkin Syntax in this Project
+# Gherkin Verification Syntax
 
-In this project, **Gherkin** is used to embed executable verification tests directly inside your Markdown documentation. Unlike standard Gherkin (which usually lives in standalone `.feature` files), this tool parses `gherkin` code blocks found within your `.md` files.
+## Value Proposition: Why Executable Markdown?
 
-### The Hierarchy
+This project decouples verification from standalone test suites, embedding it directly into documentation. This approach addresses three critical engineering challenges:
 
-*  **FEATURE:** Represents the high-level capability being tested (e.g., "FEATURE: User Authentication"). This is usually the file level.
-*   **SCENARIO:** A specific test case describing a situation (e.g., "SCENARIO: Login with valid credentials").
-*  **STEPS:** The individual instructions that are executed sequentially.
+ **Prevention of Documentation Drift:** By treating documentation as an executable test specification, the markdown document cannot diverge from the actual codebase without triggering a test failure.
 
-### Step Keywords (UPPERCASE)
+ **Contextual Verification:** Snippets run within the directory context of the documentation, ensuring that file paths and environment configs described to the user are accurate.
 
-This project enforces the use of **UPPERCASE** keywords to map English sentences to executable Bash scripts.
+ **Simplified Toolchain:** Replaces complex Cucumber/Ruby/Java stacks with standard Bash scripts, lowering the barrier to entry for writing verification logic.
 
-  * **`GIVEN` (Setup):** Establishes the initial state. Use this to create resources, generate IDs, or prepare the environment. The output of the *first* `GIVEN` step is captured globally in `$GIVEN_STDOUT`.
-  * **`WHEN` (Action):** Performs the action being tested (e.g., sending an API request, running a CLI command).
-  * **`THEN` (Assertion):** Verifies the result. If the script executes successfully (exit code 0), the step passes. If it fails (exit code \!= 0), the test fails.
-  * **`AND`:** Used to chain multiple steps of the same type (e.g., `GIVEN X, AND Y`).
+-----
 
-### The `IMPLEMENTS` Command
+## Architecture & Workflow
 
-The runner bridges the gap between English Gherkin steps and technical implementation using the `IMPLEMENTS` keyword found in `.gherkin` files. The text immediately following the keyword is treated as a **Regular Expression (Regex)**.
+The verification process relies on three distinct components: the specification (Markdown), the logic (Implementation Directory), and the executor (Runner).
 
-#### Syntax
+  **Define Specification (`.md`):**
+    Inside your Markdown documentation, define your validation logic within a fenced code block using the `gherkin` language identifier.
 
-```bash
-IMPLEMENTS <Regex Pattern>
-<Bash Script Body>
+    ````markdown
+    # My Documentation
+    ...
+    ```gherkin
+    FEATURE: System Health
+      SCENARIO: Check active services
+        GIVEN the service 'nginx' is active
+
+    ```
+    ```
+
+  **Define Logic (`gherkin-implements/`):**
+    Create `.gherkin` files inside the `gherkin-implements` directory. These files map natural language steps to executable Bash scripts using the `IMPLEMENTS` keyword and Regex patterns.
+
+  **Execute (`gherkin-runner.py`):**
+    Run the `gherkin-runner.py` script. 
+    It performs the following actions:
+
+    * Parses the `gherkin` blocks from the target `.md` file.
+    * Scans the `gherkin-implements` directory to match steps against defined Regex patterns.
+    * Generates and executes temporary Bash scripts for every step.
+
+-----
+
+## Gherkin Hierarchy
+
+The runner enforces a strict hierarchy to organize tests.
+
+  * **FEATURE:** The high-level capability being tested (e.g., "User Authentication"). Represents the file level.
+  * **SCENARIO:** A specific test case describing a situation. A single **FEATURE** may contain **one or more SCENARIOS**.
+  * **STEPS:** Sequential instructions (`GIVEN`, `WHEN`, `THEN`) executed within a scenario.
+
+-----
+
+## Step Keywords
+
+Keywords must be **UPPERCASE** to map correctly to executable scripts.
+
+### 1\. `GIVEN` (Setup)
+
+Establishes the initial state. The output of the *first* `GIVEN` step is captured globally in `$GIVEN_STDOUT`.
+
+**Usage:**
+
+```gherkin
+GIVEN a temporary directory is created
 ```
 
-  * **Regex Mapping:** The runner matches the Gherkin step text against these regex patterns.
-  * **Case Insensitivity:** The matching ignores case, so `IMPLEMENTS the user matches` handles "GIVEN THE USER MATCHES".
-  * **Capture Groups:** Use regex groups `(.*)` to capture dynamic values from the step text, which are injected as variables `$MATCH_1`, `$MATCH_2`, etc.
-
-#### Example
+**Implementation (`gherkin-implements/xxxx.gherkin`):**
 
 ```bash
-# Gherkin: "GIVEN the service 'nginx' is active"
-IMPLEMENTS the service '(.*)' is active
-  SERVICE_NAME="$MATCH_1"
-  systemctl is-active --quiet "$SERVICE_NAME"
+IMPLEMENTS a temporary directory is created
+  mktemp -d
 ```
 
-### Environment Variables
+### 2\. `WHEN` (Action)
 
-The runner injects specific context variables into the shell environment before executing your script. You can access these like any other Bash variable.
+Performs the action being tested (e.g., API requests, CLI commands).
+
+**Usage:**
+
+```gherkin
+WHEN I execute the build command
+```
+
+### 3\. `THEN` (Assertion)
+
+Verifies the result. The step passes if the exit code is `0` and fails if the exit code is non-zero.
+
+**Usage:**
+
+```gherkin
+THEN the output contains 'BUILD SUCCESSFUL'
+```
+
+### 4\. `AND` (Chaining)
+
+Chains multiple steps of the same type (Setup, Action, or Assertion).
+
+**Usage:**
+
+```gherkin
+THEN the exit code is 0
+AND the log file is empty
+```
+
+-----
+
+## Implementation Details
+
+### The `IMPLEMENTS` Keyword
+
+Found in files within the `gherkin-implements` directory, this command maps English steps to Bash.
+
+  * **Regex Mapping:** Matches step text against provided patterns (Case Insensitive).
+  * **Capture Groups:** Regex groups `(.*)` are injected as variables `$MATCH_1`, `$MATCH_2`, etc.
+
+### Context Variables
+
+The `gherkin-runner.py` injects these variables into the shell environment.
 
 | Variable | Description |
 | :--- | :--- |
-| **`$MATCH_1`, `$MATCH_2`...** | The text captured by your regex groups. `$MATCH_1` is the first group, `$MATCH_2` the second, etc. |
-| **`$GIVEN_STDOUT`** | The standard output (stdout) of the **first `GIVEN` step** in the scenario. This persists across all steps, making it ideal for referencing an ID created during setup. |
-| **`$PREVIOUS_STEP_STDOUT`** | The stdout of the **immediately preceding** step. Use this to chain steps together (e.g., Step B parses the output of Step A). |
-| **`$CATEGORY_DIR`** | The absolute path to the output directory for the current feature's category (e.g., `../dashboard/categories/operations`). Use this path to save logs or artifacts. |
-| **`$VFILENAME`** | The filename (without extension) of the verification Markdown file currently being run. Useful for generating unique log filenames. |
+| **`$MATCH_N`** | Text captured by regex groups (`$MATCH_1`, `$MATCH_2`...) |
+| **`$GIVEN_STDOUT`** | Stdout of the first `GIVEN` step (persists for whole scenario). |
+| **`$PREVIOUS_STEP_STDOUT`** | Stdout of the immediately preceding step. |
+| **`$CATEGORY_DIR`** | Absolute path to the output directory for the current category. |
+| **`$VFILENAME`** | Filename (no extension) of the verification Markdown file. |
 
-### Using External Tools (jq & Miller)
+-----
 
-Because these implementations are standard Bash scripts, you are encouraged to use powerful CLI tools for robust data processing and assertions.
+## Recommended Tooling
 
-  * **[jq](https://jqlang.github.io/jq/):** Essential for parsing JSON output from API calls or logs.
+Since implementations are standard Bash scripts, use robust CLI tools for data parsing.
 
-    ```bash
-    # Example: Check if a JSON response contains a specific status
-    echo "$PREVIOUS_STEP_STDOUT" | jq -e '.status == "active"'
-    ```
+### [jq](https://jqlang.github.io/jq/) (JSON Processor)
 
-  * **[Miller (mlr)](https://miller.readthedocs.io):** Recommended for processing CSV, TSV, and tabular data. It works like `awk`, `sed`, and `cut` combined but is aware of headers and data types.
+Essential for parsing JSON output from API calls or logs.
 
-    ```bash
-    # Example: Filter a CSV file for a specific user ID
-    mlr --csv filter '$id == 101' input.csv
-    ```
+```bash
+# Example: Check if a JSON response contains a specific status
+echo "$PREVIOUS_STEP_STDOUT" | jq -e '.status == "active"'
+```
 
-### Cross-Platform Execution (Windows Support)
+### [Miller (mlr)](https://miller.readthedocs.io) (Tabular Data)
 
-The runner is designed to work consistently on both Linux and Windows environments.
+Recommended for processing CSV, TSV, and tabular data. Aware of headers and data types.
 
-  * **Windows:** The runner automatically detects and uses **Git Bash** (part of Git for Windows). It does *not* use WSL, ensuring your scripts run in the native Windows context.
-  * **Shebangs:** You do not need to include `#!/bin/bash` at the top of your scripts; the runner handles execution explicitly.
-  * **Line Endings:** Windows CRLF line endings are automatically normalized to Unix LF to prevent syntax errors.
+```bash
+# Example: Filter a CSV file for a specific user ID
+mlr --csv filter '$id == 101' input.csv
+```
+
+-----
+
+## Platform Support
+
+  * **Windows:** The runner detects and uses **Git Bash**. Do not use WSL.
+  * **Line Endings:** Windows CRLF is normalized to Unix LF automatically.
+
+-----
