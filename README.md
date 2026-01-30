@@ -1,4 +1,4 @@
-## Project Overview: Enterprise Architecture Documentation & Governance System
+## Project Overview: Enterprise Architecture Documentation & Governance System 
 
 This project is a comprehensive **Enterprise Architecture (EA) documentation and governance system** 
 built using Python CLI tools. It creates a structured, validated, and measurable framework for managing 
